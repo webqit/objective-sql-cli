@@ -2,11 +2,11 @@
 /**
  * imports
  */
-import fs from 'fs';
-import path from 'path';
-import chalk from 'chalk';
+import Fs from 'fs';
+import Path from 'path';
+import Chalk from 'chalk';
 import _merge from '@web-native-js/commons/obj/merge.js';
-import inquirer from 'inquirer';
+import Inquirer from 'inquirer';
 
 /**
  * Obtains parameters for initializing a server.
@@ -29,8 +29,8 @@ export default async function(root, ...args) {
         assetsPublicBase: '/',
     }, params2;
     // Merge parameters from a JSON file
-    if (fs.existsSync(params2 = path.join(root, './bundling.json'))) {
-        var params2 = JSON.parse(fs.readSync(serverParams));
+    if (Fs.existsSync(params2 = Path.join(root, './bundling.json'))) {
+        var params2 = JSON.parse(Fs.readSync(serverParams));
         Object.keys(params2).forEach(k => {
             params[k] = params2[k];
         });
@@ -92,8 +92,8 @@ export default async function(root, ...args) {
             },
         ];
         console.log('');
-        console.log(chalk.white(`Enter parameters:`));
-        _merge(params, await inquirer.prompt(questions));
+        console.log(Chalk.whiteBright(`Enter parameters:`));
+        _merge(params, await Inquirer.prompt(questions));
     } else {
         // Instance priority args
         if (args[0]) {
@@ -107,8 +107,8 @@ export default async function(root, ...args) {
             var msg;
             if (validation[k] && (msg = validation[k]('!')(params[k])) !== true) {
                 console.log('');
-                console.log(chalk.red('[' + k + ']: ' + msg));
-                console.log(chalk.red('Exiting...'));
+                console.log(Chalk.redBright('[' + k + ']: ' + msg));
+                console.log(Chalk.redBright('Exiting...'));
                 process.exit();
             }
         });
@@ -116,7 +116,7 @@ export default async function(root, ...args) {
 
     // Resolve paths
     ['entryDir', 'outputFile'].forEach(name => {
-        params[name] = path.resolve(path.join(params.root, params[name]));
+        params[name] = Path.resolve(Path.join(params.root, params[name]));
     });
 
     return params;
