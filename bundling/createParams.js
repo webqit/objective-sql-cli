@@ -5,7 +5,7 @@
 import Fs from 'fs';
 import Path from 'path';
 import Chalk from 'chalk';
-import _merge from '@web-native-js/commons/obj/merge.js';
+import _merge from '@onephrase/util/obj/merge.js';
 import Inquirer from 'inquirer';
 
 /**

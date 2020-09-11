@@ -4,10 +4,10 @@
  */
 import Fs from 'fs';
 import Path from 'path';
-import _each from '@web-native-js/commons/obj/each.js';
-import _isObject from '@web-native-js/commons/js/isObject.js';
-import _isFunction from '@web-native-js/commons/js/isFunction.js';
-import _afterLast from '@web-native-js/commons/str/afterLast.js';
+import _each from '@onephrase/util/obj/each.js';
+import _isObject from '@onephrase/util/js/isObject.js';
+import _isFunction from '@onephrase/util/js/isFunction.js';
+import _afterLast from '@onephrase/util/str/afterLast.js';
 
 /**
  * ---------------------------
