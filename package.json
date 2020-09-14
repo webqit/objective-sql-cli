@@ -7,7 +7,7 @@
     "CLI"
   ],
   "homepage": "https://web-native.dev/package/chtml-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,6 +33,7 @@
     "inquirer": "^7.3.3",
     "jsdom": "^16.4.0",
     "minimist": "^1.2.5",
+    "showdown": "^1.9.1",
     "simple-git": "^2.20.1",
     "touch": "^3.1.0"
   },

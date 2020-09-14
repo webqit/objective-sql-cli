@@ -12,26 +12,28 @@ import Inquirer from 'inquirer';
  * Obtains parameters for initializing a server.
  * 
  * @param string    root
- * @param array     ...args
+ * @param object    flags
+ * @param bool      ellipsis
+ * @param string    version
  * 
  * @return Promise
  */
-export default async function(root, ...args) {
+export default async function(root, flags, ellipsis, version) {
     // -------------------
     // Create server parameters
     // -------------------
-    var params = {
+    var params = _merge({
         root,
         entryDir: './chtml',
         outputFile: './public/app.html',
         templateNamespaceAttribute: 'name',
         maxDataURLsize: 1024,
         assetsPublicBase: '/',
-    }, params2;
+    }, flags), serverParams;
     // Merge parameters from a JSON file
-    if (Fs.existsSync(params2 = Path.join(root, './bundling.json'))) {
-        var params2 = JSON.parse(Fs.readSync(serverParams));
-        Object.keys(params2).forEach(k => {
+    if (Fs.existsSync(serverParams = Path.join(root, flags['config'] || './chtml.config.js'))) {
+        var params2 = await import('file:///' + serverParams);
+        Object.keys(params2 || {}).forEach(k => {
             params[k] = params2[k];
         });
     }
@@ -53,7 +55,7 @@ export default async function(root, ...args) {
         },
     };
 
-    if (args[0] === '...') {
+    if (ellipsis) {
         var questions = [
             {
                 name: 'entryDir',
@@ -95,13 +97,6 @@ export default async function(root, ...args) {
         console.log(Chalk.whiteBright(`Enter parameters:`));
         _merge(params, await Inquirer.prompt(questions));
     } else {
-        // Instance priority args
-        if (args[0]) {
-            params.entryDir = args[0];
-        }
-        if (args[1]) {
-            params.outputFile = args[1];
-        }
         // Valiate
         Object.keys(params).forEach(k => {
             var msg;

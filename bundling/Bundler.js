@@ -5,9 +5,10 @@
 import Fs from 'fs';
 import Path from 'path';
 import _each from '@onephrase/util/obj/each.js';
+import _merge from '@onephrase/util/obj/merge.js'
 import _isObject from '@onephrase/util/js/isObject.js';
 import _isFunction from '@onephrase/util/js/isFunction.js';
-import _afterLast from '@onephrase/util/str/afterLast.js';
+import _beforeLast from '@onephrase/util/str/beforeLast.js';
 
 /**
  * ---------------------------
@@ -17,8 +18,95 @@ import _afterLast from '@onephrase/util/str/afterLast.js';
 export default class Bundler {
 		
 	/**
+	 * Bundles and saves (multiple).
+	 *
+	 * @param string|object	from
+	 * @param string		to
+	 * @param object		params
+	 *
+	 * @return string|object
+	 */
+	static async bundle(from, to = null, params = {}) {
+		if (_isObject(from)) {
+			var fromNames = Object.keys(from), bundles = {};
+
+			var readShift = async () => {
+				var name;
+				if (!(name = fromNames.shift())) {
+					return;
+				}
+				var saveName = to ? to.replace(/\[name\]/g, name) : '';
+				var bundler = await Bundler.readdir(basePath, params);
+				bundles[name] = bundler.output(saveName);
+				await readShift();
+			};
+			await readShift();
+
+			return bundles;
+		}
+		return (await Bundler.readdir(from, params)).output(to);
+	}
+
+	/**
 	 * Mounts a Bundler instance over a directory
-	 * and runs the bundling process.
+	 * and runs the directory-reading and files-loading process.
+	 *
+	 * @param string		baseDir
+	 * @param object		params
+	 * @param number		depth
+	 *
+	 * @return void
+	 */
+	static async readdir(basePath, params, depth = 0) {
+		const bundler = new Bundler(basePath, params, depth);
+		// --------------------------------
+		var load = async (resource, paramsCopy) => {
+			var callLoader = async function(index, resource, recieved) {
+				if (bundler.params.loaders && bundler.params.loaders[index]) {
+					return await bundler.params.loaders[index](resource, recieved, paramsCopy, async (...args) => {
+						return await callLoader(index + 1, resource, ...args);
+					});
+				}
+				if (!recieved) {
+				//if (arguments.length === 2) {
+					return bundler.load(resource, params);
+				}
+				return recieved;
+			};
+			return await callLoader(0, resource);
+		};
+		// --------------------------------
+		var resources = Fs.readdirSync(bundler.baseDir);
+		var readShift = async () => {
+			var resourceName;
+			if (!(resourceName = resources.shift())) {
+				return;
+			}
+			let resource = Path.join(bundler.baseDir, resourceName);
+			if (Fs.statSync(resource).isDirectory()) {
+				bundler.bundle.push(await Bundler.readdir(resource, bundler.params, depth + 1));
+			} else {
+				var paramsCopy = _merge({errors:[], info:[],}, bundler.params);
+				if (bundler.params.loadStart) {
+					bundler.params.loadStart(resource);
+				}
+				var content = await load(resource, paramsCopy);
+				if (bundler.params.loadEnd) {
+					bundler.params.loadEnd(resource, content, paramsCopy.errors, paramsCopy.info);
+				}
+				if (content) {
+					bundler.bundle.push(content);
+				}
+			}
+			await readShift();
+		};
+		await readShift();
+
+		return bundler;
+	}
+		
+	/**
+	 * A Bundler instance.
 	 *
 	 * @param string		baseDir
 	 * @param object		params
@@ -33,19 +121,11 @@ export default class Bundler {
 		this.baseDir = baseDir;
 		this.params = params;
 		this.params.templateNamespaceAttribute = this.params.templateNamespaceAttribute || 'name';
+		this.params.partialNamespaceAttribute = this.params.partialNamespaceAttribute || 'partials-slot';
 		this.params.assetsPublicBase = this.params.assetsPublicBase || '/';
 		this.depth = depth;
 		this.name = depth > 0 ? Path.basename(this.baseDir) : '';
 		this.bundle = [];
-		Fs.readdirSync(this.baseDir).forEach(name => {
-			let resource = Path.join(this.baseDir, name);
-			if (Fs.statSync(resource).isDirectory()) {
-				this.bundle.push(new Bundler(resource, params, depth + 1));
-			} else {
-				var ext = Path.extname(resource) || '';
-				this.bundle.push(this.params.loader ? this.params.loader(resource, ext) : this.load(resource, ext));
-			}
-		});
 	}
 		
 	/**
@@ -53,23 +133,25 @@ export default class Bundler {
 	 * to the bundle on the specified namespace.
 	 *
 	 * @param string		file
-	 * @param string		ext
+	 * @param object		params
 	 *
 	 * @return string|function
 	 */
-	load(file, ext) {
+	load(file, params) {
+		var ext = Path.extname(file) || '';
 		if (ext in Bundler.mime) {
 			return assetsDir => {
-				if (Fs.statSync(file).size < this.params.maxDataURLsize) {
+				if (Fs.statSync(file).size < params.maxDataURLsize) {
 					var url = 'data:' + Bundler.mime[ext] + ';base64,' + Fs.readFileSync(file).toString('base64');
 				} else {
 					var absFilename = Path.join(assetsDir || this.baseDir, Path.basename(file));
 					Fs.mkdirSync(Path.dirname(absFilename), {recursive:true});
 					Fs.copyFileSync(file, absFilename);
 					var assetsPublicFilename = getPublicFilename(absFilename, this.depth);
-					var url = this.params.assetsPublicBase + assetsPublicFilename;
+					var url = params.assetsPublicBase + assetsPublicFilename;
 				}
-				return "<img src=\"" + url + "\" />";
+				var slotName = _beforeLast(Path.basename(file), '.');
+				return `<img ${params.partialNamespaceAttribute}="${slotName}" src="${url}" />`;
 			};
 		} else {
 			var contents = Fs.readFileSync(file).toString();
@@ -113,32 +195,10 @@ export default class Bundler {
 			src = getPublicFilename(outputFile, this.depth);
 		}
 		// -----------------------------------------
-		return '<template' 
-			+ (this.name ? ' name="' + this.name + '"' : '') + '' + (src ? ' src="' + src + '"' : '') + '>' 
-			+ (!src ? contents : '')
-			+ '</template>';
+		return `<template${
+				(this.name ? ' ' + this.params.templateNamespaceAttribute + '="' + this.name + '"' : '') + (src ? ' src="' + src + '"' : '')
+			}>${(!src ? contents : '')}</template>`;
 	}	
-		
-	/**
-	 * Bundles and saves (multiple).
-	 *
-	 * @param string|object	from
-	 * @param string		to
-	 * @param object		params
-	 *
-	 * @return string|object
-	 */
-	static bundle(from, to = null, params = {}) {
-		if (_isObject(from)) {
-			var bundles = {};
-			_each(from, (name, basePath) => {
-				var saveName = to ? to.replace(/\[name\]/g, name) : '';
-				bundles[name] = (new Bundler(basePath, params)).output(saveName);
-			});
-			return bundles;
-		}
-		return (new Bundler(from, params)).output(to);
-	}
 }
 
 /**
