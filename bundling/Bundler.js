@@ -7,8 +7,14 @@ import Path from 'path';
 import _each from '@onephrase/util/obj/each.js';
 import _merge from '@onephrase/util/obj/merge.js'
 import _isObject from '@onephrase/util/js/isObject.js';
+import _isNumeric from '@onephrase/util/js/isNumeric.js';
 import _isFunction from '@onephrase/util/js/isFunction.js';
 import _beforeLast from '@onephrase/util/str/beforeLast.js';
+import _before from '@onephrase/util/str/before.js';
+import _after from '@onephrase/util/str/after.js';
+import _preceding from '@onephrase/util/arr/preceding.js';
+import _following from '@onephrase/util/arr/following.js';
+import Lexer from '@onephrase/util/str/Lexer.js';
 
 /**
  * ---------------------------
@@ -53,12 +59,11 @@ export default class Bundler {
 	 *
 	 * @param string		baseDir
 	 * @param object		params
-	 * @param number		depth
 	 *
 	 * @return void
 	 */
-	static async readdir(basePath, params, depth = 0) {
-		const bundler = new Bundler(basePath, params, depth);
+	static async readdir(basePath, params) {
+		const bundler = new Bundler(basePath, params);
 		// --------------------------------
 		var load = async (resource, paramsCopy) => {
 			var callLoader = async function(index, resource, recieved) {
@@ -84,18 +89,24 @@ export default class Bundler {
 			}
 			let resource = Path.join(bundler.baseDir, resourceName);
 			if (Fs.statSync(resource).isDirectory()) {
-				bundler.bundle.push(await Bundler.readdir(resource, bundler.params, depth + 1));
+				var _params = {...bundler.params};
+				_params.indentation ++;
+				// -------------------
+				var subBundler = await Bundler.readdir(resource, _params);
+				// -------------------
+				bundler.outline[subBundler.displayName] = subBundler.outline;
+				// -------------------
+				bundler.bundle.push(subBundler);
 			} else {
 				var paramsCopy = _merge({errors:[], info:[],}, bundler.params);
-				if (bundler.params.loadStart) {
-					bundler.params.loadStart(resource);
-				}
-				var content = await load(resource, paramsCopy);
-				if (bundler.params.loadEnd) {
-					bundler.params.loadEnd(resource, content, paramsCopy.errors, paramsCopy.info);
-				}
-				if (content) {
-					bundler.bundle.push(content);
+				if (!bundler.params.loadStart || bundler.params.loadStart(resource) !== false) {
+					var content = await load(resource, paramsCopy);
+					if (bundler.params.loadEnd) {
+						bundler.params.loadEnd(resource, content, paramsCopy.errors, paramsCopy.info);
+					}
+					if (content) {
+						bundler.bundle.push(content);
+					}
 				}
 			}
 			await readShift();
@@ -110,21 +121,33 @@ export default class Bundler {
 	 *
 	 * @param string		baseDir
 	 * @param object		params
-	 * @param number		depth
 	 *
 	 * @return void
 	 */
-	constructor(baseDir, params = {}, depth = 0) {
+	constructor(baseDir, params = {}) {
 		if (!baseDir.endsWith('/')) {
 			baseDir += '/';
 		}
 		this.baseDir = baseDir;
 		this.params = params;
-		this.params.templateNamespaceAttribute = this.params.templateNamespaceAttribute || 'name';
-		this.params.partialNamespaceAttribute = this.params.partialNamespaceAttribute || 'partials-slot';
 		this.params.assetsPublicBase = this.params.assetsPublicBase || '/';
-		this.depth = depth;
-		this.name = depth > 0 ? Path.basename(this.baseDir) : '';
+		this.params.indentation = this.params.indentation || 0;
+		// ----------------------------------------
+		this.params.getAttributeDefinition = (tag, attributeName) => {
+			var regexes = [' ' + attributeName + '([ ]+)?=([ ]+)?"([^"])+"', " " + attributeName + "([ ]+)?=([ ]+)?'([^'])+'"];
+			return regexes.reduce((result, regex) => {
+				return result || Lexer.match(tag, regex, {stopChars: '>', useRegex:'i', blocks:[]})[0];
+			});
+		};
+		this.params.defineAttribute = (tag, attributeName, attributeValue) => {
+			var parts = Lexer.split(tag, '>', {limit: 1, blocks:[]});
+			return parts[0] + ' ' + attributeName + '="' + attributeValue + '">' + parts[1];
+		};
+		// ----------------------------------------
+		this.name = this.params.indentation > 0 ? Path.basename(this.baseDir) : '';
+		this.displayName = !this.params.showOutlineNumbering && _isNumeric(_before(this.name, '-')) ? _after(this.name, '-') : this.name;
+		// -----------------------------------------
+		this.outline = {};
 		this.bundle = [];
 	}
 		
@@ -139,6 +162,7 @@ export default class Bundler {
 	 */
 	load(file, params) {
 		var ext = Path.extname(file) || '';
+		var slotName = _beforeLast(Path.basename(file), '.').toLowerCase();
 		if (ext in Bundler.mime) {
 			return assetsDir => {
 				if (Fs.statSync(file).size < params.maxDataURLsize) {
@@ -147,16 +171,21 @@ export default class Bundler {
 					var absFilename = Path.join(assetsDir || this.baseDir, Path.basename(file));
 					Fs.mkdirSync(Path.dirname(absFilename), {recursive:true});
 					Fs.copyFileSync(file, absFilename);
-					var assetsPublicFilename = getPublicFilename(absFilename, this.depth);
+					var assetsPublicFilename = getPublicFilename(absFilename, params.indentation);
 					var url = params.assetsPublicBase + assetsPublicFilename;
 				}
-				var slotName = _beforeLast(Path.basename(file), '.');
-				return `<img ${params.partialNamespaceAttribute}="${slotName}" src="${url}" />`;
+				if (params.partialNamespaceAttribute) {
+					return `<img ${params.partialNamespaceAttribute}="${slotName}" src="${url}" />`;
+				}
+				return `<img src="${url}" />`;
 			};
 		} else {
 			var contents = Fs.readFileSync(file).toString();
 			var contentsTrimmed = contents.trim();
 			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!') && !contentsTrimmed.startsWith('<?xml')) {
+				if (params.partialNamespaceAttribute && !params.getAttributeDefinition(contentsTrimmed, params.partialNamespaceAttribute)) {
+					return params.defineAttribute(contentsTrimmed, params.partialNamespaceAttribute, slotName);
+				}
 				return contentsTrimmed;
 			}
 		}
@@ -166,6 +195,7 @@ export default class Bundler {
 	 * Stringifies the bundle
 	 * and optionally saves it to a Path.
 	 *
+	 * @param string			outputFile
 	 * @param string			outputFile
 	 *
 	 * @return string
@@ -184,19 +214,36 @@ export default class Bundler {
 			}
 		}
 		// -----------------------------------------
-		var t = "\t".repeat(this.depth + 1), t2 = "\t".repeat(this.depth);
+		var subBundles = Object.keys(this.outline);
+		var totalSubBundles = subBundles.length;
+		var t = "\t".repeat(this.params.indentation + 1), t2 = "\t".repeat(this.params.indentation);
 		var contents = "\r\n" + t + this.bundle.map(html => {
-			return _isFunction(html) ? html(outputDir) : (html instanceof Bundler ? html.output(outputDir) : html);
+			if (html instanceof Bundler) {
+				var templateHTML = html.output(outputDir);
+				if (this.params.createOutlineFile) {
+					templateHTML = this.params.defineAttribute(templateHTML, 'prev', _preceding(subBundles, html.displayName) || '');
+					templateHTML = this.params.defineAttribute(templateHTML, 'index', (subBundles.indexOf(html.displayName) + 1) + '/' + totalSubBundles);
+					templateHTML = this.params.defineAttribute(templateHTML, 'next', _following(subBundles, html.displayName) || '');
+				}
+				return templateHTML;
+			}
+			return _isFunction(html) ? html(outputDir) : html;
 		}).join("\r\n\r\n" + t) + "\r\n" + t2;
+		if (this.outlineHTML) {
+			contents += "\r\n" + t + this.outlineHTML + "\r\n" + t2;
+		}
 		// -----------------------------------------
 		if (outputFileExt) {
 			Fs.mkdirSync(outputDir, {recursive:true});
 			Fs.writeFileSync(outputFile, contents);
-			src = getPublicFilename(outputFile, this.depth);
+			if (this.params.createOutlineFile) {
+				Fs.writeFileSync(_beforeLast(outputFile, '.') + '.json', JSON.stringify(this.outline, null, 4));
+			}
+			src = getPublicFilename(outputFile, this.params.indentation);
 		}
 		// -----------------------------------------
 		return `<template${
-				(this.name ? ' ' + this.params.templateNamespaceAttribute + '="' + this.name + '"' : '') + (src ? ' src="' + src + '"' : '')
+				(this.name ? ' ' + this.params.templateNamespaceAttribute + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
 			}>${(!src ? contents : '')}</template>`;
 	}	
 }
@@ -215,6 +262,6 @@ Bundler.mime = {
 /**
  * @var function
  */
-const getPublicFilename = (filename, depth) => {
-	return filename.replace(/\\/g, '/').split('/').slice(- (depth + 1)).join('/');
+const getPublicFilename = (filename, indentation) => {
+	return filename.replace(/\\/g, '/').split('/').slice(- (indentation + 1)).join('/');
 };

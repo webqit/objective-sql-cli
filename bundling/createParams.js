@@ -24,8 +24,15 @@ export default async function(root, flags, ellipsis, version) {
     // -------------------
     var params = _merge({
         root,
-        entryDir: './chtml',
-        outputFile: './public/app.html',
+        entryDir: './',
+        outputFile: './bundle.html',
+        showOutlineNumbering: true,
+        loaders: '',
+        // ---------
+        // Advanced
+        // ---------
+        createOutlineFile: true,
+        partialNamespaceAttribute: 'partials-slot',
         templateNamespaceAttribute: 'name',
         maxDataURLsize: 1024,
         assetsPublicBase: '/',
@@ -43,6 +50,21 @@ export default async function(root, flags, ellipsis, version) {
         },
         outputFile: suffix => {
             return val => val ? true : 'Please provide a file name' + suffix;
+        },
+        showOutlineNumbering: suffix => {
+            return val => [true, false].includes(val) ? true : 'Please select yes/no' + suffix;
+        },
+        loaders: suffix => {
+            return val => true;
+        },
+        // ---------
+        // Advanced
+        // ---------
+        createOutlineFile: suffix => {
+            return val => [true, false].includes(val) ? true : 'Please select yes/no' + suffix;
+        },
+        partialNamespaceAttribute: suffix => {
+            return val => val ? true : 'Please provide an attribute name' + suffix;
         },
         templateNamespaceAttribute: suffix => {
             return val => val ? true : 'Please provide an attribute name' + suffix;
@@ -72,11 +94,51 @@ export default async function(root, flags, ellipsis, version) {
                 validate: validation.outputFile(':'),
             },
             {
+                name: 'showOutlineNumbering',
+                type: 'confirm',
+                message: 'Choose whether to show outline numbering:',
+                default: params.showOutlineNumbering,
+                validate: validation.showOutlineNumbering(':'),
+            },
+            {
+                name: 'loaders',
+                type: 'input',
+                message: 'Add loaders by name, if any. (Separate with comma):',
+                default: params.loaders,
+                validate: validation.loaders(':'),
+            },
+            // ---------
+            // Advanced
+            // ---------
+            {
+                name: '__showAdvancedOptions',
+                type: 'confirm',
+                message: 'Show advanced options?',
+                default: false,
+            },
+            {
+                name: 'createOutlineFile',
+                type: 'confirm',
+                message: 'Choose whether to create an outline file:',
+                default: params.createOutlineFile,
+                validate: validation.createOutlineFile(':'),
+                when: answers => answers.__showAdvancedOptions,
+            },
+            {
+                name: 'partialNamespaceAttribute',
+                type: 'input',
+                message: 'Enter the "partial name" attribute:',
+                default: params.partialNamespaceAttribute,
+                validate: validation.partialNamespaceAttribute(':'),
+                when: answers => answers.__showAdvancedOptions,
+            },
+            {
                 name: 'templateNamespaceAttribute',
                 type: 'input',
                 message: 'Enter the "template name" attribute:',
                 default: params.templateNamespaceAttribute,
                 validate: validation.templateNamespaceAttribute(':'),
+                when: answers => answers.__showAdvancedOptions,
             },
             {
                 name: 'maxDataURLsize',
@@ -84,6 +146,7 @@ export default async function(root, flags, ellipsis, version) {
                 message: 'Enter the data-URL threshold for media files:',
                 default: params.maxDataURLsize,
                 validate: validation.maxDataURLsize(':'),
+                when: answers => answers.__showAdvancedOptions,
             },
             {
                 name: 'assetsPublicBase',
@@ -91,6 +154,7 @@ export default async function(root, flags, ellipsis, version) {
                 message: 'Enter the public base for assets:',
                 default: params.assetsPublicBase,
                 validate: validation.assetsPublicBase(':'),
+                when: answers => answers.__showAdvancedOptions,
             },
         ];
         console.log('');

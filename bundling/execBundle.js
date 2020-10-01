@@ -25,7 +25,7 @@ export default async function(params) {
 
 	if (params.loaders) {
 		if (typeof params.loaders === 'string') {
-			params.loaders = params.loaders.split('+');
+			params.loaders = params.loaders.split(',');
 		}
 		const loaders = params.loaders;
 		params.loaders = [];
@@ -34,6 +34,7 @@ export default async function(params) {
 				return;
 			}
 			if (typeof loader === 'string') {
+				loader = loader.trim();
 				var loaderUrl = loader;
 				if (loader.startsWith('default:')) {
 					loaderUrl = Path.join(Path.dirname(import.meta.url), '/loaders', loader.replace('default:', ''));
@@ -54,6 +55,9 @@ export default async function(params) {
 	var spnnr, total = 0;
 	if (!params.loadStart) {
 		params.loadStart = resource => {
+			if (resource === Path.resolve(params.outputFile)) {
+				return false;
+			}
 			if (spnnr) {
 				spnnr.stop(); spnnr = null;
 			}
