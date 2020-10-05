@@ -7,7 +7,7 @@
     "CLI"
   ],
   "homepage": "https://web-native.dev/package/chtml-cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,13 +24,12 @@
   "dependencies": {
     "@octokit/auth-basic": "^1.4.6",
     "@octokit/rest": "^17.11.0",
-    "@onephrase/util": "^0.6.0",
+    "@onephrase/util": "^0.6.1",
     "chalk": "^4.1.0",
     "clear": "^0.1.0",
     "clui": "^0.3.6",
     "configstore": "^5.0.1",
     "figlet": "^1.5.0",
-    "inquirer": "^7.3.3",
     "jsdom": "^16.4.0",
     "minimist": "^1.2.5",
     "showdown": "^1.9.1",

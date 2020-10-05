@@ -7,45 +7,35 @@ import Chalk from 'chalk';
 import _arrLast from '@onephrase/util/arr/last.js';
 import _arrFrom from '@onephrase/util/arr/from.js';
 import { createParams as createBundlerParams, execBundle } from './bundling/index.js';
+import _parseArgs from '@onephrase/util/cli/parseArgs.js';
 
-var version = 'v0.0.1';
-// Commands list
+// ------------------------------------------
+
 var commands = {
     bundle: 'Bundles HTML templates.',
 };
 
-// Mine parameters
-// ------------------------------------------
-var command = process.argv[2], _flags = process.argv.slice(3), flags = {}, ellipsis;
-if (_arrLast(_flags) === '...') {
-    _flags.pop();
-    ellipsis = true;
-}
-_flags.forEach(flag => {
-    if (flag.indexOf('+=') > -1 || flag.indexOf('=') > -1 || flag.startsWith('#')) {
-        if (flag.indexOf('+=') > -1) {
-            flag = flag.split('+=');
-            flags[flag[0]] = _arrFrom(flags[flag[0]]);
-            flags[flag[0]].push(flag[1]);
-        } else {
-            flag = flag.split('=');
-            flags[flag[0]] = flag[1];
-        }
-    } else if (flag.startsWith('--')) {
-        flags[flag.substr(2)] = true;
-    }
-});
 // ------------------------------------------
 
+const { command, flags, _flags, ellipsis } = _parseArgs(process.argv);
+
+// ------------------------------------------
+
+console.log('');
 switch(command) {
+
+    // --------------------------
+
     case 'bundle':
-        createBundlerParams(process.cwd(), flags, ellipsis, version).then(params => {
+        createBundlerParams(process.cwd(), flags, ellipsis).then(params => {
             execBundle(params);
         });
     break;
+
+    // --------------------------
+
     case 'help':
     default:
-        console.log('');
         console.log(Chalk.bgYellow(Chalk.black(' CHTML HELP ')));
         console.log('');
         console.log('Say ' + Chalk.bold(Chalk.yellow('chtml')) + ' <command> <args>');

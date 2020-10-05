@@ -6,177 +6,159 @@ import Fs from 'fs';
 import Path from 'path';
 import Chalk from 'chalk';
 import _merge from '@onephrase/util/obj/merge.js';
-import Inquirer from 'inquirer';
+import Promptx, { validateAs, transformAs } from '@onephrase/util/cli/Promptx.js';
+import * as DotJson from '@onephrase/util/src/DotJson.js';
+import printArgs from '@onephrase/util/cli/printArgs.js';
 
 /**
  * Obtains parameters for initializing a server.
  * 
- * @param string    root
+ * @param string    ROOT
  * @param object    flags
  * @param bool      ellipsis
  * @param string    version
  * 
  * @return Promise
  */
-export default async function(root, flags, ellipsis, version) {
+export default async function(ROOT, flags, ellipsis) {
+    var _params = {}, _paramsFile;
+    if (Fs.existsSync(_paramsFile = Path.join(ROOT, flags['CONFIG'] || './.chtml/bundle.config.json'))) {
+        _params = DotJson.read(_paramsFile);
+    }
     // -------------------
     // Create server parameters
     // -------------------
     var params = _merge({
-        root,
-        entryDir: './',
-        outputFile: './bundle.html',
-        showOutlineNumbering: true,
-        loaders: '',
+        ROOT,
+        ENTRY_DIR: './',
+        OUTPUT_FILE: './bundle.html',
+        SHOW_OUTLINE_NUMBERING: true,
+        LOADERS: [],
         // ---------
         // Advanced
         // ---------
-        createOutlineFile: true,
-        partialNamespaceAttribute: 'partials-slot',
-        templateNamespaceAttribute: 'name',
-        maxDataURLsize: 1024,
-        assetsPublicBase: '/',
-    }, flags), serverParams;
-    // Merge parameters from a JSON file
-    if (Fs.existsSync(serverParams = Path.join(root, flags['config'] || './chtml.config.js'))) {
-        var params2 = await import('file:///' + serverParams);
-        Object.keys(params2 || {}).forEach(k => {
-            params[k] = params2[k];
-        });
-    }
-    const validation = {
-        entryDir: suffix => {
-            return val => val ? true : 'Please provide a directory' + suffix;
-        },
-        outputFile: suffix => {
-            return val => val ? true : 'Please provide a file name' + suffix;
-        },
-        showOutlineNumbering: suffix => {
-            return val => [true, false].includes(val) ? true : 'Please select yes/no' + suffix;
-        },
-        loaders: suffix => {
-            return val => true;
-        },
-        // ---------
-        // Advanced
-        // ---------
-        createOutlineFile: suffix => {
-            return val => [true, false].includes(val) ? true : 'Please select yes/no' + suffix;
-        },
-        partialNamespaceAttribute: suffix => {
-            return val => val ? true : 'Please provide an attribute name' + suffix;
-        },
-        templateNamespaceAttribute: suffix => {
-            return val => val ? true : 'Please provide an attribute name' + suffix;
-        },
-        maxDataURLsize: suffix => {
-            return val => val ? true : 'Please provide a number' + suffix;
-        },
-        assetsPublicBase: suffix => {
-            return val => val ? true : 'Please provide a value' + suffix;
-        },
-    };
+        CREATE_OUTLINE_FILE: true,
+        PARTIALS_NAMESPACE_ATTR: 'partials-slot',
+        TEMPLATE_NAMESPACE_ATTR: 'name',
+        MAX_DATA_URL_SIZE: 1024,
+        ASSETS_PUBLIC_BASE: '/',
+    }, _params, flags);
 
     if (ellipsis) {
         var questions = [
             {
-                name: 'entryDir',
-                type: 'input',
+                name: 'ENTRY_DIR',
+                type: 'text',
                 message: 'Enter the entry directory:',
-                default: params.entryDir,
-                validate: validation.entryDir(':'),
+                initial: params.ENTRY_DIR,
+                format: transformAs(['path']),
+                validate: validateAs(['important']),
             },
             {
-                name: 'outputFile',
-                type: 'input',
+                name: 'OUTPUT_FILE',
+                type: 'text',
                 message: 'Enter the output file name:',
-                default: params.outputFile,
-                validate: validation.outputFile(':'),
+                initial: params.OUTPUT_FILE,
+                format: transformAs(['path']),
+                validate: validateAs(['important']),
             },
             {
-                name: 'showOutlineNumbering',
-                type: 'confirm',
+                name: 'SHOW_OUTLINE_NUMBERING',
+                type: 'toggle',
                 message: 'Choose whether to show outline numbering:',
-                default: params.showOutlineNumbering,
-                validate: validation.showOutlineNumbering(':'),
+                active: 'YES',
+                inactive: 'NO',
+                initial: params.SHOW_OUTLINE_NUMBERING,
             },
             {
-                name: 'loaders',
-                type: 'input',
-                message: 'Add loaders by name, if any. (Separate with comma):',
-                default: params.loaders,
-                validate: validation.loaders(':'),
+                name: 'LOADERS',
+                type: 'toggle',
+                message: 'Add LOADERS?',
+                active: 'YES',
+                inactive: 'NO',
+                prompts: {
+                    multiple: 'Add another loader?',
+                    initial: params.LOADERS,
+                    questions: [
+                        {
+                            name: 'name',
+                            type: 'text',
+                            message: 'Enter loader name:',
+                            validate: validateAs(['important']),
+                        },
+                        {
+                            name: 'args',
+                            type: 'text',
+                            message: 'Enter loader arguments/flags (comma-separated):',
+                        }
+                    ]
+                }
             },
             // ---------
             // Advanced
             // ---------
             {
-                name: '__showAdvancedOptions',
-                type: 'confirm',
+                name: '__advanced',
+                type: 'toggle',
                 message: 'Show advanced options?',
-                default: false,
+                active: 'YES',
+                inactive: 'NO',
             },
             {
-                name: 'createOutlineFile',
-                type: 'confirm',
+                name: 'CREATE_OUTLINE_FILE',
+                type: 'toggle',
+                type: (prev, answers) => answers.__advanced ? 'toggle' : null,
                 message: 'Choose whether to create an outline file:',
-                default: params.createOutlineFile,
-                validate: validation.createOutlineFile(':'),
-                when: answers => answers.__showAdvancedOptions,
+                active: 'YES',
+                inactive: 'NO',
+                initial: params.CREATE_OUTLINE_FILE,
             },
             {
-                name: 'partialNamespaceAttribute',
-                type: 'input',
-                message: 'Enter the "partial name" attribute:',
-                default: params.partialNamespaceAttribute,
-                validate: validation.partialNamespaceAttribute(':'),
-                when: answers => answers.__showAdvancedOptions,
+                name: 'PARTIALS_NAMESPACE_ATTR',
+                type: (prev, answers) => answers.__advanced ? 'text' : null,
+                message: 'Enter the "partials name" attribute:',
+                initial: params.PARTIALS_NAMESPACE_ATTR,
+                validate: validateAs(['important']),
             },
             {
-                name: 'templateNamespaceAttribute',
-                type: 'input',
+                name: 'TEMPLATE_NAMESPACE_ATTR',
+                type: (prev, answers) => answers.__advanced ? 'text' : null,
                 message: 'Enter the "template name" attribute:',
-                default: params.templateNamespaceAttribute,
-                validate: validation.templateNamespaceAttribute(':'),
-                when: answers => answers.__showAdvancedOptions,
+                initial: params.TEMPLATE_NAMESPACE_ATTR,
+                validate: validateAs(['important']),
             },
             {
-                name: 'maxDataURLsize',
-                type: 'number',
+                name: 'MAX_DATA_URL_SIZE',
+                type: (prev, answers) => answers.__advanced ? 'number' : null,
                 message: 'Enter the data-URL threshold for media files:',
-                default: params.maxDataURLsize,
-                validate: validation.maxDataURLsize(':'),
-                when: answers => answers.__showAdvancedOptions,
+                initial: params.MAX_DATA_URL_SIZE,
+                validate: validateAs(['important']),
             },
             {
-                name: 'assetsPublicBase',
-                type: 'input',
+                name: 'ASSETS_PUBLIC_BASE',
+                type: (prev, answers) => answers.__advanced ? 'number' : null,
                 message: 'Enter the public base for assets:',
-                default: params.assetsPublicBase,
-                validate: validation.assetsPublicBase(':'),
-                when: answers => answers.__showAdvancedOptions,
+                initial: params.ASSETS_PUBLIC_BASE,
             },
         ];
+
         console.log('');
         console.log(Chalk.whiteBright(`Enter parameters:`));
-        _merge(params, await Inquirer.prompt(questions));
+        _merge(params, await Promptx(questions));
+
     } else {
-        // Valiate
-        Object.keys(params).forEach(k => {
-            var msg;
-            if (validation[k] && (msg = validation[k]('!')(params[k])) !== true) {
-                console.log('');
-                console.log(Chalk.redBright('[' + k + ']: ' + msg));
-                console.log(Chalk.redBright('Exiting...'));
-                process.exit();
-            }
-        });
+
+        console.log('');
+        console.log(Chalk.whiteBright(`Creating a bundle with the following params:`));
+        printArgs(params);
+
     }
 
-    // Resolve paths
-    ['entryDir', 'outputFile'].forEach(name => {
-        params[name] = Path.resolve(Path.join(params.root, params[name]));
-    });
+    // ---------------------------
+
+    if (!flags['CONFIG']) {
+        DotJson.write(params, _paramsFile);
+    }
 
     return params;
 };

@@ -67,8 +67,8 @@ export default class Bundler {
 		// --------------------------------
 		var load = async (resource, paramsCopy) => {
 			var callLoader = async function(index, resource, recieved) {
-				if (bundler.params.loaders && bundler.params.loaders[index]) {
-					return await bundler.params.loaders[index](resource, recieved, paramsCopy, async (...args) => {
+				if (bundler.params.LOADERS && bundler.params.LOADERS[index]) {
+					return await bundler.params.LOADERS[index](resource, recieved, paramsCopy, async (...args) => {
 						return await callLoader(index + 1, resource, ...args);
 					});
 				}
@@ -130,7 +130,7 @@ export default class Bundler {
 		}
 		this.baseDir = baseDir;
 		this.params = params;
-		this.params.assetsPublicBase = this.params.assetsPublicBase || '/';
+		this.params.ASSETS_PUBLIC_BASE = this.params.ASSETS_PUBLIC_BASE || '/';
 		this.params.indentation = this.params.indentation || 0;
 		// ----------------------------------------
 		this.params.getAttributeDefinition = (tag, attributeName) => {
@@ -145,7 +145,7 @@ export default class Bundler {
 		};
 		// ----------------------------------------
 		this.name = this.params.indentation > 0 ? Path.basename(this.baseDir) : '';
-		this.displayName = !this.params.showOutlineNumbering && _isNumeric(_before(this.name, '-')) ? _after(this.name, '-') : this.name;
+		this.displayName = !this.params.SHOW_OUTLINE_NUMBERING && _isNumeric(_before(this.name, '-')) ? _after(this.name, '-') : this.name;
 		// -----------------------------------------
 		this.outline = {};
 		this.bundle = [];
@@ -165,17 +165,17 @@ export default class Bundler {
 		var slotName = _beforeLast(Path.basename(file), '.').toLowerCase();
 		if (ext in Bundler.mime) {
 			return assetsDir => {
-				if (Fs.statSync(file).size < params.maxDataURLsize) {
+				if (Fs.statSync(file).size < params.MAX_DATA_URL_SIZE) {
 					var url = 'data:' + Bundler.mime[ext] + ';base64,' + Fs.readFileSync(file).toString('base64');
 				} else {
 					var absFilename = Path.join(assetsDir || this.baseDir, Path.basename(file));
 					Fs.mkdirSync(Path.dirname(absFilename), {recursive:true});
 					Fs.copyFileSync(file, absFilename);
 					var assetsPublicFilename = getPublicFilename(absFilename, params.indentation);
-					var url = params.assetsPublicBase + assetsPublicFilename;
+					var url = params.ASSETS_PUBLIC_BASE + assetsPublicFilename;
 				}
-				if (params.partialNamespaceAttribute) {
-					return `<img ${params.partialNamespaceAttribute}="${slotName}" src="${url}" />`;
+				if (params.PARTIALS_NAMESPACE_ATTR) {
+					return `<img ${params.PARTIALS_NAMESPACE_ATTR}="${slotName}" src="${url}" />`;
 				}
 				return `<img src="${url}" />`;
 			};
@@ -183,8 +183,8 @@ export default class Bundler {
 			var contents = Fs.readFileSync(file).toString();
 			var contentsTrimmed = contents.trim();
 			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!') && !contentsTrimmed.startsWith('<?xml')) {
-				if (params.partialNamespaceAttribute && !params.getAttributeDefinition(contentsTrimmed, params.partialNamespaceAttribute)) {
-					return params.defineAttribute(contentsTrimmed, params.partialNamespaceAttribute, slotName);
+				if (params.PARTIALS_NAMESPACE_ATTR && !params.getAttributeDefinition(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR)) {
+					return params.defineAttribute(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR, slotName);
 				}
 				return contentsTrimmed;
 			}
@@ -220,7 +220,7 @@ export default class Bundler {
 		var contents = "\r\n" + t + this.bundle.map(html => {
 			if (html instanceof Bundler) {
 				var templateHTML = html.output(outputDir);
-				if (this.params.createOutlineFile) {
+				if (this.params.CREATE_OUTLINE_FILE) {
 					templateHTML = this.params.defineAttribute(templateHTML, 'prev', _preceding(subBundles, html.displayName) || '');
 					templateHTML = this.params.defineAttribute(templateHTML, 'index', (subBundles.indexOf(html.displayName) + 1) + '/' + totalSubBundles);
 					templateHTML = this.params.defineAttribute(templateHTML, 'next', _following(subBundles, html.displayName) || '');
@@ -236,14 +236,14 @@ export default class Bundler {
 		if (outputFileExt) {
 			Fs.mkdirSync(outputDir, {recursive:true});
 			Fs.writeFileSync(outputFile, contents);
-			if (this.params.createOutlineFile) {
+			if (this.params.CREATE_OUTLINE_FILE) {
 				Fs.writeFileSync(_beforeLast(outputFile, '.') + '.json', JSON.stringify(this.outline, null, 4));
 			}
 			src = getPublicFilename(outputFile, this.params.indentation);
 		}
 		// -----------------------------------------
 		return `<template${
-				(this.name ? ' ' + this.params.templateNamespaceAttribute + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
+				(this.name ? ' ' + this.params.TEMPLATE_NAMESPACE_ATTR + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
 			}>${(!src ? contents : '')}</template>`;
 	}	
 }

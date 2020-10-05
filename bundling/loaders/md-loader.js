@@ -11,8 +11,8 @@ export default function(resource, recieved, params, next) {
     // Catch .md files
     if (!recieved && resource.endsWith('.md')) {
         var markdown = new Showdown.Converter({metadata: true});
-        if (params['md-flavor']) {
-            markdown.setFlavor(params['md-flavor']);
+        if (params['MD-FLAVOR']) {
+            markdown.setFlavor(params['MD-FLAVOR']);
         }
         try {
             var html = markdown.makeHtml(Fs.readFileSync(resource).toString());
@@ -21,8 +21,8 @@ export default function(resource, recieved, params, next) {
             var slotName = _beforeLast(Path.basename(resource), '.').toLowerCase();
             var t = "\t".repeat(params.indentation + 2), t2 = "\t".repeat(params.indentation + 1);
             var content = `\r\n\r\n` + t + html + `\r\n\r\n` + t2;
-            if (params.partialNamespaceAttribute) {
-                return `<div ${params.partialNamespaceAttribute}="${slotName}">${content}</div>`;
+            if (params.PARTIALS_NAMESPACE_ATTR) {
+                return `<div ${params.PARTIALS_NAMESPACE_ATTR}="${slotName}">${content}</div>`;
             }
             return `<div>${content}</div>`;
         } catch(e) {

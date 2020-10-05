@@ -6,6 +6,8 @@ import Clui from 'clui';
 import Chalk from 'chalk';
 import Path from 'path';
 import Bundler from './Bundler.js';
+import _isString from '@onephrase/util/js/isString.js';
+import _isObject from '@onephrase/util/js/isObject.js';
 
 /**
  * Bundles files from the given entry directory
@@ -19,34 +21,37 @@ export default async function(params) {
 	console.info('');
 	console.info('Building chtml bundles:');
 	console.info('');
-	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' FROM ')) + ': ' + Chalk.greenBright(params.entryDir));
-	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' TO ')) + ': ' + Chalk.greenBright(params.outputFile));
+	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' FROM ')) + ': ' + Chalk.greenBright(params.ENTRY_DIR));
+	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' TO ')) + ': ' + Chalk.greenBright(params.OUTPUT_FILE));
 	console.info('');
 
-	if (params.loaders) {
-		if (typeof params.loaders === 'string') {
-			params.loaders = params.loaders.split(',');
+	if (params.LOADERS) {
+		if (typeof params.LOADERS === 'string') {
+			params.LOADERS = params.LOADERS.split(',');
 		}
-		const loaders = params.loaders;
-		params.loaders = [];
+		const LOADERS = params.LOADERS;
+		params.LOADERS = [];
 		const resolveLoaders = async loader => {
-			if (!(loader = loaders.shift())) {
+			if (!(loader = LOADERS.shift())) {
 				return;
 			}
-			if (typeof loader === 'string') {
-				loader = loader.trim();
-				var loaderUrl = loader;
-				if (loader.startsWith('default:')) {
-					loaderUrl = Path.join(Path.dirname(import.meta.url), '/loaders', loader.replace('default:', ''));
+			if (_isString(loader)) {
+				loader = {name: loader.trim()};
+			}
+			if (_isObject(loader) && loader.name) {
+				var loaderName = loader.name;
+				var loaderUrl = loaderName;
+				if (loaderName.startsWith('default:')) {
+					loaderUrl = Path.join(Path.dirname(import.meta.url), '/LOADERS', loaderName.replace('default:', ''));
 				}
 				var imported = await import(loaderUrl + '.js');
 				if (imported.default) {
 					loader = imported.default;
 				} else {
-					throw new Error('Loader "' + loader + '" not found at ' + loaderUrl);
+					throw new Error('Loader "' + loaderName + '" not found at ' + loaderUrl);
 				}
 			}
-			params.loaders.push(loader);
+			params.LOADERS.push(loader);
 			resolveLoaders();
 		};
 		await resolveLoaders();
@@ -55,7 +60,7 @@ export default async function(params) {
 	var spnnr, total = 0;
 	if (!params.loadStart) {
 		params.loadStart = resource => {
-			if (resource === Path.resolve(params.outputFile)) {
+			if (resource === Path.resolve(params.OUTPUT_FILE)) {
 				return false;
 			}
 			if (spnnr) {
@@ -91,7 +96,7 @@ export default async function(params) {
 	}
 
 	// -------------------------------
-	await Bundler.bundle(params.entryDir, params.outputFile, params);
+	await Bundler.bundle(params.ENTRY_DIR, params.OUTPUT_FILE, params);
 	// -------------------------------
 
 	console.info('');
