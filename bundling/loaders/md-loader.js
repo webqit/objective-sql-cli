@@ -5,14 +5,19 @@
 import Fs from 'fs';
 import Path from 'path';
 import Showdown from 'showdown';
+import ShowdownHighlight from 'showdown-highlight';
 import _beforeLast from '@onephrase/util/str/beforeLast.js';
 
 export default function(resource, recieved, params, next) {
     // Catch .md files
     if (!recieved && resource.endsWith('.md')) {
-        var markdown = new Showdown.Converter({metadata: true});
-        if (params['MD-FLAVOR']) {
-            markdown.setFlavor(params['MD-FLAVOR']);
+        var showdownParams = {metadata: true};
+        if (params['MD-LOADER:CODE_HIGHLIGHTING']) {
+            showdownParams.extensions = [ShowdownHighlight];
+        }
+        var markdown = new Showdown.Converter(showdownParams);
+        if (params['MD-LOADER:FLAVOR']) {
+            markdown.setFlavor(params['MD-LOADER:FLAVOR']);
         }
         try {
             var html = markdown.makeHtml(Fs.readFileSync(resource).toString());

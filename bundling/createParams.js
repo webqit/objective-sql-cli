@@ -5,6 +5,7 @@
 import Fs from 'fs';
 import Path from 'path';
 import Chalk from 'chalk';
+import Clear from 'clear';
 import _merge from '@onephrase/util/obj/merge.js';
 import Promptx, { validateAs, transformAs } from '@onephrase/util/cli/Promptx.js';
 import * as DotJson from '@onephrase/util/src/DotJson.js';
@@ -21,6 +22,7 @@ import printArgs from '@onephrase/util/cli/printArgs.js';
  * @return Promise
  */
 export default async function(ROOT, flags, ellipsis) {
+    Clear();
     var _params = {}, _paramsFile;
     if (Fs.existsSync(_paramsFile = Path.join(ROOT, flags['CONFIG'] || './.chtml/bundle.config.json'))) {
         _params = DotJson.read(_paramsFile);
@@ -37,6 +39,7 @@ export default async function(ROOT, flags, ellipsis) {
         // ---------
         // Advanced
         // ---------
+        IGNORE_FOLDERS_BY_PREFIX: ['.'],
         CREATE_OUTLINE_FILE: true,
         PARTIALS_NAMESPACE_ATTR: 'partials-slot',
         TEMPLATE_NAMESPACE_ATTR: 'name',
@@ -76,6 +79,7 @@ export default async function(ROOT, flags, ellipsis) {
                 message: 'Add LOADERS?',
                 active: 'YES',
                 inactive: 'NO',
+                initial: params.LOADERS ? true : false,
                 prompts: {
                     multiple: 'Add another loader?',
                     initial: params.LOADERS,
@@ -88,9 +92,28 @@ export default async function(ROOT, flags, ellipsis) {
                         },
                         {
                             name: 'args',
-                            type: 'text',
-                            message: 'Enter loader arguments/flags (comma-separated):',
-                        }
+                            type: 'toggle',
+                            message: 'Add loader arguments/flags?',
+                            active: 'YES',
+                            inactive: 'NO',
+                            prompts: {
+                                multiple: 'Add another argument/flag?',
+                                combomode: true,
+                                questions: [
+                                    {
+                                        name: 'name',
+                                        type: 'text',
+                                        message: 'Enter argument/flag name:',
+                                        validate: validateAs(['important']),
+                                    },
+                                    {
+                                        name: 'value',
+                                        type: 'text',
+                                        message: 'Enter argument/flag value:',
+                                    },
+                                ]
+                            }
+                        },
                     ]
                 }
             },
@@ -103,10 +126,16 @@ export default async function(ROOT, flags, ellipsis) {
                 message: 'Show advanced options?',
                 active: 'YES',
                 inactive: 'NO',
+                initial: params.__advanced,
+            },
+            {
+                name: 'IGNORE_FOLDERS_BY_PREFIX',
+                type: (prev, answers) => answers.__advanced ? 'list' : null,
+                message: 'List folders to ignore by prefix (comma-separated):',
+                initial: (params.IGNORE_FOLDERS_BY_PREFIX || []).join(', '),
             },
             {
                 name: 'CREATE_OUTLINE_FILE',
-                type: 'toggle',
                 type: (prev, answers) => answers.__advanced ? 'toggle' : null,
                 message: 'Choose whether to create an outline file:',
                 active: 'YES',

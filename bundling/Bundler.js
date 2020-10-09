@@ -89,14 +89,16 @@ export default class Bundler {
 			}
 			let resource = Path.join(bundler.baseDir, resourceName);
 			if (Fs.statSync(resource).isDirectory()) {
-				var _params = {...bundler.params};
-				_params.indentation ++;
-				// -------------------
-				var subBundler = await Bundler.readdir(resource, _params);
-				// -------------------
-				bundler.outline[subBundler.displayName] = subBundler.outline;
-				// -------------------
-				bundler.bundle.push(subBundler);
+				if (!(bundler.params.IGNORE_FOLDERS_BY_PREFIX || []).filter(prfx => resourceName.substr(0, prfx.length) === prfx).length) {
+					var _params = {...bundler.params};
+					_params.indentation ++;
+					// -------------------
+					var subBundler = await Bundler.readdir(resource, _params);
+					// -------------------
+					bundler.outline[subBundler.displayName] = subBundler.outline;
+					// -------------------
+					bundler.bundle.push(subBundler);
+				}
 			} else {
 				var paramsCopy = _merge({errors:[], info:[],}, bundler.params);
 				if (!bundler.params.loadStart || bundler.params.loadStart(resource) !== false) {

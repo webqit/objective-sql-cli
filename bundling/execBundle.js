@@ -21,8 +21,8 @@ export default async function(params) {
 	console.info('');
 	console.info('Building chtml bundles:');
 	console.info('');
-	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' FROM ')) + ': ' + Chalk.greenBright(params.ENTRY_DIR));
-	console.info(Chalk.blueBright('> ') + Chalk.bgWhiteBright(Chalk.black(' TO ')) + ': ' + Chalk.greenBright(params.OUTPUT_FILE));
+	console.info(Chalk.blueBright('> ') + Chalk.bgGray(Chalk.black('FROM')) + ': ' + Chalk.greenBright(params.ENTRY_DIR));
+	console.info(Chalk.blueBright('> ') + Chalk.bgGray(Chalk.black('TO')) + ': ' + Chalk.greenBright(params.OUTPUT_FILE));
 	console.info('');
 
 	if (params.LOADERS) {
@@ -39,10 +39,22 @@ export default async function(params) {
 				loader = {name: loader.trim()};
 			}
 			if (_isObject(loader) && loader.name) {
-				var loaderName = loader.name;
-				var loaderUrl = loaderName;
+				var loaderName = loader.name, isDefault;
 				if (loaderName.startsWith('default:')) {
-					loaderUrl = Path.join(Path.dirname(import.meta.url), '/LOADERS', loaderName.replace('default:', ''));
+					isDefault = true;
+					loaderName = loaderName.replace('default:', '');
+				}
+				// ---------------
+				// Use info so far to resolve loader args
+				if (_isObject(loader.args)) {
+					Object.keys(loader.args).forEach(name => {
+						params[(loaderName + ':' + name).toUpperCase()] = loader.args[name];
+					});
+				}
+				// ---------------
+				var loaderUrl = loaderName;
+				if (isDefault) {
+					loaderUrl = Path.join(Path.dirname(import.meta.url), '/LOADERS', loaderName);
 				}
 				var imported = await import(loaderUrl + '.js');
 				if (imported.default) {
