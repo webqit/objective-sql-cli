@@ -6,7 +6,7 @@ import Fs from 'fs';
 import Path from 'path';
 import Showdown from 'showdown';
 import ShowdownHighlight from 'showdown-highlight';
-import _beforeLast from '@onephrase/util/str/beforeLast.js';
+import _beforeLast from '@webqit/util/str/beforeLast.js';
 
 export default function(resource, recieved, params, next) {
     // Catch .md files

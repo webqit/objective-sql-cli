@@ -4,17 +4,17 @@
  */
 import Fs from 'fs';
 import Path from 'path';
-import _each from '@onephrase/util/obj/each.js';
-import _merge from '@onephrase/util/obj/merge.js'
-import _isObject from '@onephrase/util/js/isObject.js';
-import _isNumeric from '@onephrase/util/js/isNumeric.js';
-import _isFunction from '@onephrase/util/js/isFunction.js';
-import _beforeLast from '@onephrase/util/str/beforeLast.js';
-import _before from '@onephrase/util/str/before.js';
-import _after from '@onephrase/util/str/after.js';
-import _preceding from '@onephrase/util/arr/preceding.js';
-import _following from '@onephrase/util/arr/following.js';
-import Lexer from '@onephrase/util/str/Lexer.js';
+import _each from '@webqit/util/obj/each.js';
+import _merge from '@webqit/util/obj/merge.js'
+import _isObject from '@webqit/util/js/isObject.js';
+import _isNumeric from '@webqit/util/js/isNumeric.js';
+import _isFunction from '@webqit/util/js/isFunction.js';
+import _beforeLast from '@webqit/util/str/beforeLast.js';
+import _before from '@webqit/util/str/before.js';
+import _after from '@webqit/util/str/after.js';
+import _preceding from '@webqit/util/arr/preceding.js';
+import _following from '@webqit/util/arr/following.js';
+import Lexer from '@webqit/util/str/Lexer.js';
 
 /**
  * ---------------------------
@@ -135,15 +135,33 @@ export default class Bundler {
 		this.params.ASSETS_PUBLIC_BASE = this.params.ASSETS_PUBLIC_BASE || '/';
 		this.params.indentation = this.params.indentation || 0;
 		// ----------------------------------------
+		const divideByComment = tag => {
+			var _comment = '', _tag;
+			if (tag.startsWith('<!--')) {
+				_comment = _before(tag, '-->') + '-->';
+				_tag = _after(tag, '-->');
+			} else {
+				_tag = tag;
+			}
+			// Shift whitespace too
+			_comment += _before(_tag, '<');
+			tag = '<' + _after(_tag, '<');
+			return [_comment, _tag];
+		};
+		// ----------------------------------------
 		this.params.getAttributeDefinition = (tag, attributeName) => {
+			var [ comment, tag ] = divideByComment(tag);
+			// --------------
 			var regexes = [' ' + attributeName + '([ ]+)?=([ ]+)?"([^"])+"', " " + attributeName + "([ ]+)?=([ ]+)?'([^'])+'"];
 			return regexes.reduce((result, regex) => {
 				return result || Lexer.match(tag, regex, {stopChars: '>', useRegex:'i', blocks:[]})[0];
-			});
+			}, '');
 		};
 		this.params.defineAttribute = (tag, attributeName, attributeValue) => {
+			var [ comment, tag ] = divideByComment(tag);
+			// --------------
 			var parts = Lexer.split(tag, '>', {limit: 1, blocks:[]});
-			return parts[0] + ' ' + attributeName + '="' + attributeValue + '">' + parts[1];
+			return comment + parts[0] + ' ' + attributeName + '="' + attributeValue + '">' + parts[1];
 		};
 		// ----------------------------------------
 		this.name = this.params.indentation > 0 ? Path.basename(this.baseDir) : '';
@@ -184,7 +202,7 @@ export default class Bundler {
 		} else {
 			var contents = Fs.readFileSync(file).toString();
 			var contentsTrimmed = contents.trim();
-			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!') && !contentsTrimmed.startsWith('<?xml')) {
+			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!DOCTYPE') && !contentsTrimmed.startsWith('<?xml')) {
 				if (params.PARTIALS_NAMESPACE_ATTR && !params.getAttributeDefinition(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR)) {
 					return params.defineAttribute(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR, slotName);
 				}
@@ -239,7 +257,12 @@ export default class Bundler {
 			Fs.mkdirSync(outputDir, {recursive:true});
 			Fs.writeFileSync(outputFile, contents);
 			if (this.params.CREATE_OUTLINE_FILE) {
-				Fs.writeFileSync(_beforeLast(outputFile, '.') + '.json', JSON.stringify(this.outline, null, 4));
+				var outlineFile = _beforeLast(outputFile, '.') + '.json';
+				var outline = {outline: this.outline};
+				if (Fs.existsSync(outlineFile)) {
+					outline = _merge({}, outline, JSON.parse(Fs.readFileSync(outlineFile)));
+				}
+				Fs.writeFileSync(outlineFile, JSON.stringify(outline, null, 4));
 			}
 			src = getPublicFilename(outputFile, this.params.indentation);
 		}

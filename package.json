@@ -1,30 +1,31 @@
 {
-  "name": "@web-native-js/chtml-cli",
-  "title": "CHTML CLI",
-  "description": "CHTML Command Line Interface.",
+  "name": "@webqit/oohtml-cli",
+  "title": "OOHTML CLI",
+  "description": "OOHTML Command Line Interface.",
   "keywords": [
-    "CHTML",
+    "OOHTML",
     "CLI"
   ],
-  "homepage": "https://web-native.dev/package/chtml-cli",
+  "homepage": "https://webqit.dev/tooling/oohtml-cli",
   "version": "0.0.6",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/web-native/chtml-cli.git"
+    "url": "git+https://github.com/webqit/oohtml-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/web-native/chtml-cli/issues"
+    "url": "https://github.com/webqit/oohtml-cli/issues"
   },
   "type": "module",
   "main": "index.js",
   "bin": {
-    "chtml": "./index.js"
+    "oohtml": "./index.js"
   },
   "dependencies": {
     "@octokit/auth-basic": "^1.4.6",
     "@octokit/rest": "^17.11.0",
-    "@onephrase/util": "^0.6.2",
+    "@webqit/backpack": "file:../backpack",
+    "@webqit/util": "file:../util",
     "chalk": "^4.1.0",
     "clear": "^0.1.0",
     "clui": "^0.3.6",
@@ -54,10 +55,10 @@
     ],
     "config": {
       "patreonUsername": "ox_harris",
-      "githubUsername": "web-native",
-      "githubRepository": "chtml-cli",
-      "githubSlug": "web-native/chtml-cli",
-      "npmPackageName": "@web-native-js/chtml-cli"
+      "githubUsername": "webqit",
+      "githubRepository": "oohtml-cli",
+      "githubSlug": "webqit/oohtml-cli",
+      "npmPackageName": "@webqit/oohtml-cli"
     }
   }
 }
