@@ -194,8 +194,8 @@ export default class Bundler {
 					var assetsPublicFilename = getPublicFilename(absFilename, params.indentation);
 					var url = params.ASSETS_PUBLIC_BASE + assetsPublicFilename;
 				}
-				if (params.PARTIALS_NAMESPACE_ATTR) {
-					return `<img ${params.PARTIALS_NAMESPACE_ATTR}="${slotName}" src="${url}" />`;
+				if (params.EXPORT_ID_ATTR) {
+					return `<img ${params.EXPORT_ID_ATTR}="${slotName}" src="${url}" />`;
 				}
 				return `<img src="${url}" />`;
 			};
@@ -203,8 +203,8 @@ export default class Bundler {
 			var contents = Fs.readFileSync(file).toString();
 			var contentsTrimmed = contents.trim();
 			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!DOCTYPE') && !contentsTrimmed.startsWith('<?xml')) {
-				if (params.PARTIALS_NAMESPACE_ATTR && !params.getAttributeDefinition(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR)) {
-					return params.defineAttribute(contentsTrimmed, params.PARTIALS_NAMESPACE_ATTR, slotName);
+				if (params.EXPORT_ID_ATTR && !params.getAttributeDefinition(contentsTrimmed, params.EXPORT_ID_ATTR)) {
+					return params.defineAttribute(contentsTrimmed, params.EXPORT_ID_ATTR, slotName);
 				}
 				return contentsTrimmed;
 			}
@@ -259,8 +259,8 @@ export default class Bundler {
 			if (this.params.CREATE_OUTLINE_FILE) {
 				var outlineFile = _beforeLast(outputFile, '.') + '.json';
 				var outline = {outline: this.outline};
-				if (Fs.existsSync(outlineFile)) {
-					outline = _merge({}, outline, JSON.parse(Fs.readFileSync(outlineFile)));
+				if (Fs.existsSync(outlineFile) && this.params.CREATE_OUTLINE_FILE === 'create_merge') {
+					outline = _merge(6, {}, JSON.parse(Fs.readFileSync(outlineFile)), outline);
 				}
 				Fs.writeFileSync(outlineFile, JSON.stringify(outline, null, 4));
 			}
@@ -268,7 +268,7 @@ export default class Bundler {
 		}
 		// -----------------------------------------
 		return `<template${
-				(this.name ? ' ' + this.params.TEMPLATE_NAMESPACE_ATTR + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
+				(this.name ? ' ' + this.params.TEMPLATE_NAME_ATTR + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
 			}>${(!src ? contents : '')}</template>`;
 	}	
 }

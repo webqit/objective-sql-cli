@@ -83,6 +83,6 @@ console.log('');
             Ui.log(Ui.f`Where <${'command'}> is one of:`);
             Ui.log(Ui.f`${commands}`);
             Ui.log('');
-            Ui.log(Ui.f`You may also refer to the OOHTML-CLI DOCS as ${'https://webqit.dev/tooling/oohtml-cli'}`);
+            Ui.log(Ui.f`You may also refer to the OOHTML-CLI DOCS as ${'https://webqit.io/tooling/oohtml-cli'}`);
     }    
 })();

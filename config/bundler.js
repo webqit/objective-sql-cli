@@ -4,6 +4,7 @@
  */
 import Path from 'path';
 import _merge from '@webqit/util/obj/merge.js';
+import { initialGetIndex } from '@webqit/backpack/src/cli/Promptx.js';
 import * as DotJson from '@webqit/backpack/src/dotfiles/DotJson.js';
 
 /**
@@ -32,13 +33,13 @@ export async function write(data, params = {}) {
 /**
  * Configures BUNDLING.
  * 
- * @param object    data
+ * @param object    config
  * @param object    choices
  * @param object    params
  * 
  * @return Array
  */
-export async function questions(data, choices = {}, params = {}) {
+export async function questions(config, choices = {}, params = {}) {
 
     // Params
     const DATA = _merge({
@@ -51,14 +52,20 @@ export async function questions(data, choices = {}, params = {}) {
         // ---------
         IGNORE_FOLDERS_BY_PREFIX: ['.'],
         CREATE_OUTLINE_FILE: true,
-        PARTIALS_NAMESPACE_ATTR: 'partials-slot',
-        TEMPLATE_NAMESPACE_ATTR: 'name',
+        EXPORT_ID_ATTR: 'export',
+        TEMPLATE_NAME_ATTR: 'name',
         MAX_DATA_URL_SIZE: 1024,
         ASSETS_PUBLIC_BASE: '/',
-    }, data);
+    }, config);
 
     // Choices hash...
-    const CHOICES = _merge({}, choices);
+    const CHOICES = _merge({
+        create_outline_file: [
+            {value: '', title: 'No outline'},
+            {value: 'create', title: 'Create'},
+            {value: 'create_merge', title: 'Create and merge'},
+        ],
+    }, choices);
 
     // Questions
     return [
@@ -141,24 +148,23 @@ export async function questions(data, choices = {}, params = {}) {
         },
         {
             name: 'CREATE_OUTLINE_FILE',
-            type: (prev, answers) => answers.__advanced ? 'toggle' : null,
+            type: (prev, answers) => answers.__advanced ? 'select' : null,
             message: 'Choose whether to create an outline file:',
-            active: 'YES',
-            inactive: 'NO',
-            initial: DATA.CREATE_OUTLINE_FILE,
+            choices: CHOICES.create_outline_file,
+            initial: initialGetIndex(CHOICES.create_outline_file, DATA.CREATE_OUTLINE_FILE),
         },
         {
-            name: 'PARTIALS_NAMESPACE_ATTR',
+            name: 'EXPORT_ID_ATTR',
             type: (prev, answers) => answers.__advanced ? 'text' : null,
-            message: 'Enter the "partials name" attribute:',
-            initial: DATA.PARTIALS_NAMESPACE_ATTR,
+            message: 'Enter the "export ID" attribute:',
+            initial: DATA.EXPORT_ID_ATTR,
             validation: ['important'],
         },
         {
-            name: 'TEMPLATE_NAMESPACE_ATTR',
+            name: 'TEMPLATE_NAME_ATTR',
             type: (prev, answers) => answers.__advanced ? 'text' : null,
             message: 'Enter the "template name" attribute:',
-            initial: DATA.TEMPLATE_NAMESPACE_ATTR,
+            initial: DATA.TEMPLATE_NAME_ATTR,
             validation:['important'],
         },
         {

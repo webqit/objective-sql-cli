@@ -26,8 +26,8 @@ export default function(resource, recieved, params, next) {
             var slotName = _beforeLast(Path.basename(resource), '.').toLowerCase();
             var t = "\t".repeat(params.indentation + 2), t2 = "\t".repeat(params.indentation + 1);
             var content = `\r\n\r\n` + t + html + `\r\n\r\n` + t2;
-            if (params.PARTIALS_NAMESPACE_ATTR) {
-                return `<div ${params.PARTIALS_NAMESPACE_ATTR}="${slotName}">${content}</div>`;
+            if (params.EXPORT_ID_ATTR) {
+                return `<div ${params.EXPORT_ID_ATTR}="${slotName}">${content}</div>`;
             }
             return `<div>${content}</div>`;
         } catch(e) {

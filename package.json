@@ -6,8 +6,8 @@
     "OOHTML",
     "CLI"
   ],
-  "homepage": "https://webqit.dev/tooling/oohtml-cli",
-  "version": "0.0.6",
+  "homepage": "https://webqit.io/tooling/oohtml-cli",
+  "version": "0.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,8 +24,8 @@
   "dependencies": {
     "@octokit/auth-basic": "^1.4.6",
     "@octokit/rest": "^17.11.0",
-    "@webqit/backpack": "file:../backpack",
-    "@webqit/util": "file:../util",
+    "@webqit/backpack": "0.0.3",
+    "@webqit/util": "^0.7.0",
     "chalk": "^4.1.0",
     "clear": "^0.1.0",
     "clui": "^0.3.6",
