@@ -12,6 +12,7 @@ import _isFunction from '@webqit/util/js/isFunction.js';
 import _beforeLast from '@webqit/util/str/beforeLast.js';
 import _before from '@webqit/util/str/before.js';
 import _after from '@webqit/util/str/after.js';
+import _toTitle from '@webqit/util/str/toTitle.js';
 import _preceding from '@webqit/util/arr/preceding.js';
 import _following from '@webqit/util/arr/following.js';
 import Lexer from '@webqit/util/str/Lexer.js';
@@ -42,7 +43,9 @@ export default class Bundler {
 					return;
 				}
 				var saveName = to ? to.replace(/\[name\]/g, name) : '';
-				var bundler = await Bundler.readdir(basePath, params);
+				var _params = {...params};
+				_params.ENTRY_DIR = from[name];
+				var bundler = await Bundler.readdir(from[name], _params);
 				bundles[name] = bundler.output(saveName);
 				await readShift();
 			};
@@ -65,15 +68,19 @@ export default class Bundler {
 	static async readdir(basePath, params) {
 		const bundler = new Bundler(basePath, params);
 		// --------------------------------
-		var load = async (resource, paramsCopy) => {
+		var load = async (resource, paramsCopy, errors, meta) => {
 			var callLoader = async function(index, resource, recieved) {
 				if (bundler.params.LOADERS && bundler.params.LOADERS[index]) {
-					return await bundler.params.LOADERS[index](resource, recieved, paramsCopy, async (...args) => {
-						return await callLoader(index + 1, resource, ...args);
-					});
+					var loader = bundler.params.LOADERS[index];
+					try {
+						return await loader.load(resource, paramsCopy, loader.args, recieved, meta, async (...args) => {
+							return await callLoader(index + 1, resource, ...args);
+						});
+					} catch(e) {
+						errors[resource] = e;
+					}
 				}
 				if (!recieved) {
-				//if (arguments.length === 2) {
 					return bundler.load(resource, params);
 				}
 				return recieved;
@@ -88,27 +95,29 @@ export default class Bundler {
 				return;
 			}
 			let resource = Path.join(bundler.baseDir, resourceName);
+			var basename = resourceName;
 			if (Fs.statSync(resource).isDirectory()) {
 				if (!(bundler.params.IGNORE_FOLDERS_BY_PREFIX || []).filter(prfx => resourceName.substr(0, prfx.length) === prfx).length) {
 					var _params = {...bundler.params};
 					_params.indentation ++;
-					// -------------------
-					var subBundler = await Bundler.readdir(resource, _params);
-					// -------------------
-					bundler.outline[subBundler.displayName] = subBundler.outline;
-					// -------------------
-					bundler.bundle.push(subBundler);
+					if (('SHOW_OUTLINE_NUMBERING' in bundler.params) && !bundler.params.SHOW_OUTLINE_NUMBERING && _isNumeric(_before(basename, '-'))) {
+						basename = _after(basename, '-');
+					}
+					bundler.outline[basename] = await Bundler.readdir(resource, _params);
 				}
 			} else {
-				var paramsCopy = _merge({errors:[], info:[],}, bundler.params);
-				if (!bundler.params.loadStart || bundler.params.loadStart(resource) !== false) {
-					var content = await load(resource, paramsCopy);
+				var paramsCopy = {...bundler.params}, errors = {}, meta = {};
+				if (!bundler.params.loadStart || bundler.params.loadStart(resource, paramsCopy) !== false) {
+					var content = await load(resource, paramsCopy, errors, meta);
 					if (bundler.params.loadEnd) {
-						bundler.params.loadEnd(resource, content, paramsCopy.errors, paramsCopy.info);
+						bundler.params.loadEnd(resource, paramsCopy, content, errors, meta);
 					}
-					if (content) {
-						bundler.bundle.push(content);
-					}
+					basename = _beforeLast(basename, '.').toLowerCase();
+					bundler.outline[basename] = {
+						content,
+						errors,
+						meta,
+					};
 				}
 			}
 			await readShift();
@@ -163,12 +172,8 @@ export default class Bundler {
 			var parts = Lexer.split(tag, '>', {limit: 1, blocks:[]});
 			return comment + parts[0] + ' ' + attributeName + '="' + attributeValue + '">' + parts[1];
 		};
-		// ----------------------------------------
-		this.name = this.params.indentation > 0 ? Path.basename(this.baseDir) : '';
-		this.displayName = !this.params.SHOW_OUTLINE_NUMBERING && _isNumeric(_before(this.name, '-')) ? _after(this.name, '-') : this.name;
 		// -----------------------------------------
 		this.outline = {};
-		this.bundle = [];
 	}
 		
 	/**
@@ -182,7 +187,15 @@ export default class Bundler {
 	 */
 	load(file, params) {
 		var ext = Path.extname(file) || '';
-		var slotName = _beforeLast(Path.basename(file), '.').toLowerCase();
+		var exportGroup = _beforeLast(Path.basename(file), '.').toLowerCase();
+		var createExport = (content, exportGroup) => {
+			if (params.EXPORT_MODE === 'element' && params.EXPORT_ELEMENT && params.EXPORT_ID_ATTR) {
+				return '<' + params.EXPORT_ELEMENT + ' ' + params.EXPORT_ID_ATTR + '="' + exportGroup + '">' + content + '</' + params.EXPORT_ELEMENT + '>';
+			} else if (params.EXPORT_MODE === 'attribute' && params.EXPORT_GROUP_ATTR && !params.getAttributeDefinition(content, params.EXPORT_GROUP_ATTR)) {
+				return params.defineAttribute(content, params.EXPORT_GROUP_ATTR, exportGroup);
+			}
+			return content;
+		};
 		if (ext in Bundler.mime) {
 			return assetsDir => {
 				if (Fs.statSync(file).size < params.MAX_DATA_URL_SIZE) {
@@ -194,19 +207,14 @@ export default class Bundler {
 					var assetsPublicFilename = getPublicFilename(absFilename, params.indentation);
 					var url = params.ASSETS_PUBLIC_BASE + assetsPublicFilename;
 				}
-				if (params.EXPORT_ID_ATTR) {
-					return `<img ${params.EXPORT_ID_ATTR}="${slotName}" src="${url}" />`;
-				}
-				return `<img src="${url}" />`;
+				var img = `<img src="${url}" />`;
+				return createExport(img, exportGroup);
 			};
 		} else {
 			var contents = Fs.readFileSync(file).toString();
 			var contentsTrimmed = contents.trim();
 			if (contentsTrimmed.startsWith('<') && !contentsTrimmed.startsWith('<!DOCTYPE') && !contentsTrimmed.startsWith('<?xml')) {
-				if (params.EXPORT_ID_ATTR && !params.getAttributeDefinition(contentsTrimmed, params.EXPORT_ID_ATTR)) {
-					return params.defineAttribute(contentsTrimmed, params.EXPORT_ID_ATTR, slotName);
-				}
-				return contentsTrimmed;
+				return createExport(contentsTrimmed, exportGroup);
 			}
 		}
 	}
@@ -216,51 +224,50 @@ export default class Bundler {
 	 * and optionally saves it to a Path.
 	 *
 	 * @param string			outputFile
-	 * @param string			outputFile
+	 * @param object			outline
+	 * @param string			name
 	 *
 	 * @return string
 	 */
-	output(outputFile = null) {
+	output(outputFile = null, outline = {}, name = null) {
 		// -----------------------------------------
-		var outputFileExt, outputDir, subOutputDir, src;
+		var outputFileExt, outputDir, src;
 		if (outputFile) {
 			if (!Path.isAbsolute(outputFile)) {
 				outputFile = Path.resolve(this.baseDir, outputFile);
 			}
-			if (outputFileExt = Path.extname(outputFile)) {
+			if (!name && (outputFileExt = Path.extname(outputFile))) {
 				outputDir = Path.dirname(outputFile);
 			} else {
-				outputDir = Path.join(outputFile, this.name);
+				outputDir = Path.join(outputFile, name);
 			}
 		}
 		// -----------------------------------------
-		var subBundles = Object.keys(this.outline);
-		var totalSubBundles = subBundles.length;
-		var t = "\t".repeat(this.params.indentation + 1), t2 = "\t".repeat(this.params.indentation);
-		var contents = "\r\n" + t + this.bundle.map(html => {
-			if (html instanceof Bundler) {
-				var templateHTML = html.output(outputDir);
-				if (this.params.CREATE_OUTLINE_FILE) {
-					templateHTML = this.params.defineAttribute(templateHTML, 'prev', _preceding(subBundles, html.displayName) || '');
-					templateHTML = this.params.defineAttribute(templateHTML, 'index', (subBundles.indexOf(html.displayName) + 1) + '/' + totalSubBundles);
-					templateHTML = this.params.defineAttribute(templateHTML, 'next', _following(subBundles, html.displayName) || '');
+		var t = "\t".repeat(this.params.indentation + 1),
+			t2 = "\t".repeat(this.params.indentation);
+		var contents = "\r\n" + t + Object.keys(this.outline).map(name => {
+			var entry = this.outline[name];
+			if (entry instanceof Bundler) {
+				if (!outline.subtree) {
+					outline.subtree = {};
 				}
-				return templateHTML;
+				outline.subtree[name] = {};
+				return entry.output(outputDir, outline.subtree[name], name);
 			}
-			return _isFunction(html) ? html(outputDir) : html;
+			if (!outline.meta) {
+				outline.meta = {};
+			}
+			outline.meta[name] = entry.meta;
+			return _isFunction(entry.content) ? entry.content(outputDir) : entry.content;
 		}).join("\r\n\r\n" + t) + "\r\n" + t2;
-		if (this.outlineHTML) {
-			contents += "\r\n" + t + this.outlineHTML + "\r\n" + t2;
-		}
 		// -----------------------------------------
 		if (outputFileExt) {
 			Fs.mkdirSync(outputDir, {recursive:true});
 			Fs.writeFileSync(outputFile, contents);
 			if (this.params.CREATE_OUTLINE_FILE) {
-				var outlineFile = _beforeLast(outputFile, '.') + '.json';
-				var outline = {outline: this.outline};
+				var outlineFile = outputFile + '.json';
 				if (Fs.existsSync(outlineFile) && this.params.CREATE_OUTLINE_FILE === 'create_merge') {
-					outline = _merge(6, {}, JSON.parse(Fs.readFileSync(outlineFile)), outline);
+					outline = _merge(100, {}, JSON.parse(Fs.readFileSync(outlineFile)), outline);
 				}
 				Fs.writeFileSync(outlineFile, JSON.stringify(outline, null, 4));
 			}
@@ -268,7 +275,7 @@ export default class Bundler {
 		}
 		// -----------------------------------------
 		return `<template${
-				(this.name ? ' ' + this.params.TEMPLATE_NAME_ATTR + '="' + this.displayName + '"' : '') + (src ? ' src="' + src + '"' : '')
+				((this.params.TEMPLATE_ELEMENT || '').trim() ? ' is="' + this.params.TEMPLATE_ELEMENT + '"' : '') + (name ? ' ' + this.params.TEMPLATE_NAME_ATTR + '="' + name + '"' : '') + (src ? ' src="' + src + '"' : '')
 			}>${(!src ? contents : '')}</template>`;
 	}	
 }
