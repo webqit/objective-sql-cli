@@ -9,6 +9,7 @@ import Jsdom from 'jsdom';
 import ShowdownHighlight from 'showdown-highlight';
 import _beforeLast from '@webqit/util/str/beforeLast.js';
 import _last from '@webqit/util/arr/last.js';
+import _merge from '@webqit/util/obj/merge.js';
 
 export default function(resource, params, args, recieved, meta, next) {
     // Catch .md files
@@ -26,8 +27,8 @@ export default function(resource, params, args, recieved, meta, next) {
     }
 
     var html = markdown.makeHtml(Fs.readFileSync(resource).toString());
-    //var metadata = markdown.getMetadata();
-    //console.log(metadata);
+    var metadata = markdown.getMetadata();
+    _merge(meta, metadata);
     var exportGroup = _beforeLast(Path.basename(resource), '.').toLowerCase();
     var t = "\t".repeat(params.indentation + 2), t2 = "\t".repeat(params.indentation + 1);
     var content = `\r\n\r\n` + t + html + `\r\n\r\n` + t2;
