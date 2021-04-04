@@ -10,11 +10,12 @@ import * as DotJson from '@webqit/backpack/src/dotfiles/DotJson.js';
 /**
  * Reads BUNDLING from file.
  * 
+ * @param object    flags
  * @param object    params
  * 
  * @return object
  */
-export async function read(params = {}) {
+export async function read(flags = {}, params = {}) {
     const config = DotJson.read(Path.join(params.ROOT || '', './.oohtml-cli/config/bundler.json'));
     return _merge({
         ENTRY_DIR: './',
@@ -41,11 +42,12 @@ export async function read(params = {}) {
  * Writes BUNDLING to file.
  * 
  * @param object    data
+ * @param object    flags
  * @param object    params
  * 
  * @return void
  */
-export async function write(data, params = {}) {
+export async function write(data, flags = {}, params = {}) {
     DotJson.write(data, Path.join(params.ROOT || '', './.oohtml-cli/config/bundler.json'));
 };
 

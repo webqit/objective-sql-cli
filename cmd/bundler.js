@@ -21,7 +21,7 @@ export const desc = {
 /**
  * @build
  */
-export async function bundle(Ui, params = {}) {
+export async function bundle(Ui, flags = {}, params = {}) {
 	const config = await bundler.read(params);
     Ui.title(`${'Creating HTML bundles'} ...`);
     Ui.info('');
