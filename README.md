@@ -1,4 +1,4 @@
-# OOHTML CLI
+# Objective SQL CLI
 
 <!-- BADGES/ -->
 
