@@ -67,9 +67,9 @@ export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 					return resolve();
 				}
 				// On --up, ignore .done.js files
-				if ((migrateDirection === 'up' && migrationLock.processed.includes(migrationFile) && !options['--only'] === migrationFile)
+				if ((migrateDirection === 'up' && migrationLock.processed.includes(migrationFile) && options['--only'] !== migrationFile)
 				// On --down, ignore .done.js files
-				|| (migrateDirection === 'down' && !migrationLock.processed.includes(migrationFile) && !options['--only'] === migrationFile)) {
+				|| (migrateDirection === 'down' && !migrationLock.processed.includes(migrationFile) && options['--only'] !== migrationFile)) {
 					return resolve();
 				}
 				if (!processedFiles.length || flags.all) {
