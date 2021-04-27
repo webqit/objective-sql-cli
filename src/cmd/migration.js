@@ -23,34 +23,34 @@ export const desc = {
  */
 export async function migrate(Ui, flags = {}, params = {}) {
 	const config = await migration.read(params);
-    Ui.title(`${'Running migration'} ...`);
+    Ui.title(`${'Running migrations'} ...`);
     Ui.info('');
-    Ui.info(Ui.f`FROM: ${config.ENTRY_DIR}`);
-    Ui.info(Ui.f`TO: ${config.OUTPUT_FILE}`);
+    Ui.info(Ui.f`FROM: ${config.MIGRATIONS_DIR}`);
     Ui.info('');
 
 	const cmdArgs = process.argv.slice(2);
 	const migrateDirection = cmdArgs.includes('--down') ? 'down' : 'up';
-	const __dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
 	
 	// Use migration lock file
-	var migrationFiles = Fs.readdirSync(Path.join(__dirname, 'migrations'));
+	var migrationFiles = Fs.readdirSync(config.MIGRATIONS_DIR);
 	var migrationLock = {
 		processed: [],
 		state: {},
-	}, migrationLockFile = Path.join(__dirname, 'migrations-lock.json');
+	}, migrationLockFile = config.MIGRATIONS_LOCK_FILE || Path.join(config.MIGRATIONS_DIR, 'migrations-lock.json');
 	if (Fs.existsSync(migrationLockFile)) {
 		migrationLock = JSON.parse(Fs.readFileSync(migrationLockFile));
 	}
-	
-	// Give driver the current state of schema
-	// Now, changes mage by migration runners will reflect back
-	// at the lock file.
-	const dbDriver = getDbDriver();
-	dbDriver.bindSchema(migrationLock.state || {});
+	var dbDriver, dbDriverFile = config.OBJSQL_INSTANCE_FILE;
+	if (Fs.existsSync(dbDriverFile)) {
+		dbDriver = await (await import(Url.pathToFileURL(Path.resolve(dbDriverFile)))).default();
+		// Give driver the current state of schema
+		// Now, changes mage by migration runners will reflect back
+		// at the lock file.
+		dbDriver.bindSchema(migrationLock.state || {});
+	}
 	
 	// Run migration...
-	var lastestFileCalled, ongoingMigration;
+	var processedFiles = [], ongoingMigration;
 	if (migrationFiles.length) {
 	
 		// Run migrations here
@@ -62,7 +62,7 @@ export async function migrate(Ui, flags = {}, params = {}) {
 			ongoingMigration = new Promise(async resolve => {
 				await ongoingMigration;
 	
-				var migrationFileUrl = Path.join(__dirname, 'migrations', migrationFile);
+				var migrationFileUrl = Path.resolve(config.MIGRATIONS_DIR, migrationFile);
 				if (Fs.statSync(migrationFileUrl).isDirectory() || !migrationFile.endsWith('.js')) {
 					return resolve();
 				}
@@ -72,11 +72,15 @@ export async function migrate(Ui, flags = {}, params = {}) {
 				|| (migrateDirection === 'down' && !migrationLock.processed.includes(migrationFile) && !cmdArgs.includes('--only=' + migrationFile))) {
 					return resolve();
 				}
-				if (!lastestFileCalled || cmdArgs.includes('--all')) {
-					lastestFileCalled = true;
-					const _import = await import(migrationFileUrl);
+				if (!processedFiles.length || cmdArgs.includes('--all')) {
+					processedFiles.push(migrationFile);
+					const _import = await import(Url.pathToFileURL(migrationFileUrl));
 					if (_import[migrateDirection]) {
-						await _import[migrateDirection](dbDriver);
+						if (dbDriver) {
+							await _import[migrateDirection](dbDriver);
+						} else {
+							await _import[migrateDirection]();
+						}
 					}
 					if (migrateDirection === 'down') {
 						migrationLock.processed = migrationLock.processed.filter(f => f !== migrationFile);
@@ -91,11 +95,11 @@ export async function migrate(Ui, flags = {}, params = {}) {
 	
 		ongoingMigration.then(() => {
 			Fs.writeFileSync(migrationLockFile, JSON.stringify(migrationLock, null, 4));
+			Ui.info('');
+			Ui.info(Ui.f`${processedFiles.length} total files processed.`);
+			Ui.info(Ui.f`See file: ${migrationLockFile} for details.`);
 			process.exit();
 		});
 	
 	}
-	
-	Ui.info('');
-    Ui.info(Ui.f`${total} total files bundled.`);
 };

@@ -22,7 +22,7 @@ const params = {
 // ------------------------------------------
 
 const commands = {
-    config: 'Starts a configuration processes.',
+    config: 'Starts a configuration process.',
     migrate: cmd.migration.desc.migrate,
 };
 
