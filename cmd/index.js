@@ -2,4 +2,4 @@
 /**
  * exports
  */
- export * as bundler from './bundler.js';
+ export * as migration from './migration.js';

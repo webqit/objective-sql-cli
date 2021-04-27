@@ -23,7 +23,7 @@ const params = {
 
 const commands = {
     config: 'Starts a configuration processes.',
-    bundle: cmd.bundler.desc.bundle,
+    migrate: cmd.migration.desc.migrate,
 };
 
 // ------------------------------------------
@@ -39,8 +39,8 @@ console.log('');
 
         // --------------------------
 
-        case 'bundle':
-            cmd.bundler.bundle(Ui, flags, params);
+        case 'migrate':
+            cmd.migration.migrate(Ui, flags, params);
         break;
 
         // --------------------------
@@ -74,11 +74,11 @@ console.log('');
         default:
             Ui.title(`NAVIGATOR HELP`);
             Ui.log('');
-            Ui.log(Ui.f`Say ${'oohtml'} <${'command'}>`);
+            Ui.log(Ui.f`Say ${'obj-sql'} <${'command'}>`);
             Ui.log('');
             Ui.log(Ui.f`Where <${'command'}> is one of:`);
             Ui.log(Ui.f`${commands}`);
             Ui.log('');
-            Ui.log(Ui.f`You may also refer to the OOHTML-CLI DOCS as ${'https://webqit.io/tooling/oohtml-cli'}`);
+            Ui.log(Ui.f`You may also refer to the Objective-SQL-CLI DOCS as ${'https://webqit.io/tooling/objective-sql-cli'}`);
     }    
 })();

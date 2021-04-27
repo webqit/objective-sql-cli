@@ -1,25 +1,25 @@
 {
-  "name": "@webqit/oohtml-cli",
-  "title": "OOHTML CLI",
-  "description": "OOHTML Command Line Interface.",
+  "name": "@webqit/objective-sql-cli",
+  "title": "Objective SQL CLI",
+  "description": "Objective SQL Command Line Interface.",
   "keywords": [
-    "OOHTML",
+    "Objective SQL",
     "CLI"
   ],
-  "homepage": "https://webqit.io/tooling/oohtml-cli",
-  "version": "0.1.21",
+  "homepage": "https://webqit.io/tooling/objective-sql-cli",
+  "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/webqit/oohtml-cli.git"
+    "url": "git+https://github.com/webqit/objective-sql-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/webqit/oohtml-cli/issues"
+    "url": "https://github.com/webqit/objective-sql-cli/issues"
   },
   "type": "module",
   "main": "index.js",
   "bin": {
-    "oohtml": "./index.js"
+    "objsql": "./index.js"
   },
   "dependencies": {
     "@webqit/backpack": "0.0.3",
@@ -46,9 +46,9 @@
     "config": {
       "patreonUsername": "ox_harris",
       "githubUsername": "webqit",
-      "githubRepository": "oohtml-cli",
-      "githubSlug": "webqit/oohtml-cli",
-      "npmPackageName": "@webqit/oohtml-cli"
+      "githubRepository": "objective-sql-cli",
+      "githubSlug": "webqit/objective-sql-cli",
+      "npmPackageName": "@webqit/objective-sql-cli"
     }
   }
 }

@@ -48,3 +48,4 @@ To report bugs or request features, please submit an [issue](https://github.com/
 
 ## License
 MIT.
+# objective-sql-cli
