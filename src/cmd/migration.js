@@ -23,12 +23,14 @@ export const desc = {
  */
 export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 	const config = await migration.read(params);
-    Ui.title(`${'Running migrations'} ...`);
-    Ui.info('');
-    Ui.info(Ui.f`FROM: ${config.MIGRATIONS_DIR}`);
-    Ui.info('');
+	
+	if (!flags.silent) {
+		Ui.title(`${'Running migrations'} ...`);
+		Ui.info('');
+		Ui.info(Ui.f`FROM: ${config.MIGRATIONS_DIR}`);
+		Ui.info('');
+	}
 
-	const cmdArgs = process.argv.slice(2);
 	const migrateDirection = flags.down ? 'down' : 'up';
 	
 	// Use migration lock file
@@ -95,9 +97,11 @@ export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 	
 		ongoingMigration.then(() => {
 			Fs.writeFileSync(migrationLockFile, JSON.stringify(migrationLock, null, 4));
-			Ui.info('');
-			Ui.info(Ui.f`${processedFiles.length} total files processed.`);
-			Ui.info(Ui.f`See file: ${migrationLockFile} for details.`);
+			if (!flags.silent) {
+				Ui.info(Ui.f`${processedFiles.length} total files processed.`);
+				Ui.info(Ui.f`See file: ${migrationLockFile} for details.`);
+				Ui.info('');
+			}
 			process.exit();
 		});
 	
