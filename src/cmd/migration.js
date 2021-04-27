@@ -21,7 +21,7 @@ export const desc = {
 /**
  * @build
  */
-export async function migrate(Ui, flags = {}, params = {}) {
+export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 	const config = await migration.read(params);
     Ui.title(`${'Running migrations'} ...`);
     Ui.info('');
@@ -29,18 +29,18 @@ export async function migrate(Ui, flags = {}, params = {}) {
     Ui.info('');
 
 	const cmdArgs = process.argv.slice(2);
-	const migrateDirection = cmdArgs.includes('--down') ? 'down' : 'up';
+	const migrateDirection = flags.down ? 'down' : 'up';
 	
 	// Use migration lock file
-	var migrationFiles = Fs.readdirSync(config.MIGRATIONS_DIR);
+	var migrationFiles = options['--dir'] || Fs.readdirSync(config.MIGRATIONS_DIR);
 	var migrationLock = {
 		processed: [],
 		state: {},
-	}, migrationLockFile = config.MIGRATIONS_LOCK_FILE || Path.join(config.MIGRATIONS_DIR, 'migrations-lock.json');
+	}, migrationLockFile = options['--lock-file'] || config.MIGRATIONS_LOCK_FILE || Path.join(config.MIGRATIONS_DIR, 'migrations-lock.json');
 	if (Fs.existsSync(migrationLockFile)) {
 		migrationLock = JSON.parse(Fs.readFileSync(migrationLockFile));
 	}
-	var dbDriver, dbDriverFile = config.OBJSQL_INSTANCE_FILE;
+	var dbDriver, dbDriverFile = options['--objsql-instance-file'] || config.OBJSQL_INSTANCE_FILE;
 	if (Fs.existsSync(dbDriverFile)) {
 		dbDriver = await (await import(Url.pathToFileURL(Path.resolve(dbDriverFile)))).default();
 		// Give driver the current state of schema
@@ -67,12 +67,12 @@ export async function migrate(Ui, flags = {}, params = {}) {
 					return resolve();
 				}
 				// On --up, ignore .done.js files
-				if ((migrateDirection === 'up' && migrationLock.processed.includes(migrationFile) && !cmdArgs.includes('--only=' + migrationFile))
+				if ((migrateDirection === 'up' && migrationLock.processed.includes(migrationFile) && !options['--only'] === migrationFile)
 				// On --down, ignore .done.js files
-				|| (migrateDirection === 'down' && !migrationLock.processed.includes(migrationFile) && !cmdArgs.includes('--only=' + migrationFile))) {
+				|| (migrateDirection === 'down' && !migrationLock.processed.includes(migrationFile) && !options['--only'] === migrationFile)) {
 					return resolve();
 				}
-				if (!processedFiles.length || cmdArgs.includes('--all')) {
+				if (!processedFiles.length || flags.all) {
 					processedFiles.push(migrationFile);
 					const _import = await import(Url.pathToFileURL(migrationFileUrl));
 					if (_import[migrateDirection]) {

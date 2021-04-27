@@ -29,6 +29,7 @@ const commands = {
 // ------------------------------------------
 
 const { command, keywords, flags, options, ellipsis } = parseArgs(process.argv);
+console.log(command, '------', keywords, '------', flags, '------', options)
 
 // ------------------------------------------
 
@@ -40,7 +41,7 @@ console.log('');
         // --------------------------
 
         case 'migrate':
-            cmd.migration.migrate(Ui, flags, params);
+            cmd.migration.migrate(Ui, flags, options, options);
         break;
 
         // --------------------------
