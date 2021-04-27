@@ -23,7 +23,7 @@ const params = {
 
 const commands = {
     config: 'Starts a configuration process.',
-    migrate: cmd.migration.desc.migrate,
+    ...cmd.migration.desc,
 };
 
 // ------------------------------------------
@@ -40,7 +40,11 @@ console.log('');
         // --------------------------
 
         case 'migrate':
-            cmd.migration.migrate(Ui, flags, options, options);
+            cmd.migration.migrate(Ui, flags, options, params);
+        break;
+
+        case 'migrate:create':
+            cmd.migration.create(Ui, Object.keys(keywords)[0], flags, options. params);
         break;
 
         // --------------------------

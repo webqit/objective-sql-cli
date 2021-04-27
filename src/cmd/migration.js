@@ -15,11 +15,12 @@ import * as migration from '../config/migration.js'
  * @description
  */
 export const desc = {
-    bundle: 'Creates the "partials" bundles.',
+    migrate: 'Runs available DB migrations.',
+    'migrate:create': 'Creates a migration template.',
 };
 
 /**
- * @build
+ * @migrate
  */
 export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 	const config = await migration.read(params);
@@ -34,7 +35,7 @@ export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 	const migrateDirection = flags.down ? 'down' : 'up';
 	
 	// Use migration lock file
-	var migrationFiles = options['--dir'] || Fs.readdirSync(config.MIGRATIONS_DIR);
+	var migrationFiles = Fs.readdirSync(options['--dir'] || config.MIGRATIONS_DIR);
 	var migrationLock = {
 		processed: [],
 		state: {},
@@ -106,4 +107,41 @@ export async function migrate(Ui, flags = {}, options = {}, params = {}) {
 		});
 	
 	}
-};
+}
+
+/**
+ * @migrate
+ */
+ export async function create(Ui, name, flags = {}, options = {}, params = {}) {
+	const config = await migration.read(params);
+	
+	if (!flags.silent) {
+		Ui.title(`${'Creating a migration template'} ...`);
+		Ui.info('');
+		Ui.info(Ui.f`TO: ${config.MIGRATIONS_DIR}`);
+		Ui.info('');
+	}
+
+	const __dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
+
+	var dbDriverFile = options['--objsql-instance-file'] || config.OBJSQL_INSTANCE_FILE,
+		migrationDir = options['--dir'] || config.MIGRATIONS_DIR,
+		newTemplateName = Date.now() + '-' + name + '.js';
+	var templateSourceDir = Path.join(__dirname, '../modules/migration'),
+		templateSourceFile,
+		templateSource;
+
+	if (dbDriverFile && Fs.existsSync(templateSourceFile = Path.join(templateSourceDir, 'template-1.js'))) {
+		templateSource = Fs.readFileSync(templateSourceFile);
+	} else if (Fs.existsSync(templateSourceFile = Path.join(templateSourceDir, 'template-0.js'))) {
+		templateSource = Fs.readFileSync(templateSourceFile);
+	}
+
+	if (templateSource) {
+		Fs.writeFileSync(Path.join(migrationDir, newTemplateName), templateSource);
+		if (!flags.silent) {
+			Ui.info(Ui.f`Created: ${newTemplateName}`);
+			Ui.info('');
+		}
+	}
+}

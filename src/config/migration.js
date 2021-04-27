@@ -19,7 +19,7 @@ export async function read(flags = {}, params = {}) {
     return _merge({
         MIGRATIONS_DIR: './src/database/migrations',
         MIGRATIONS_LOCK_FILE: '',
-        OBJSQL_INSTANCE_FILE: './src/database/index.js',
+        OBJSQL_INSTANCE_FILE: '',
     }, config);
 };
 
@@ -60,17 +60,25 @@ export async function questions(config, choices = {}, params = {}) {
             validation: ['important'],
         },
         {
-            name: 'MIGRATIONS_LOCK_FILE',
-            type: 'text',
-            message: 'Enter the migrations-lock file',
-            initial: DATA.MIGRATIONS_LOCK_FILE,
-            validation: ['important'],
-        },
-        {
             name: 'OBJSQL_INSTANCE_FILE',
             type: 'text',
             message: 'Enter the Objective SQL instance file',
             initial: DATA.OBJSQL_INSTANCE_FILE,
+        },
+        {
+            name: '__advanced',
+            type: 'toggle',
+            message: 'Show advanced options?',
+            active: 'YES',
+            inactive: 'NO',
+            initial: DATA.__advanced,
+        },
+        {
+            name: 'MIGRATIONS_LOCK_FILE',
+            type: (prev, answers) => answers.__advanced ? 'text' : null,
+            message: 'Enter the migrations-lock file (leave empty to use the default)',
+            initial: DATA.MIGRATIONS_LOCK_FILE,
+            validation: ['important'],
         },
     ];
 };
