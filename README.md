@@ -8,7 +8,7 @@
 <!-- /BADGES -->
 
 
-*[OOHTML CLI](https://webqit.io/tooling/objective-sql-cli)* is a Command-Line utility for Objective SQL.
+*[Objective SQL CLI](https://webqit.io/tooling/objective-sql-cli)* is a Command-Line utility for Objective SQL.
 
 > [Visit project homepage](https://webqit.io/tooling/objective-sql-cli).
 
