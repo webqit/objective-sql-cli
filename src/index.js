@@ -29,7 +29,6 @@ const commands = {
 // ------------------------------------------
 
 const { command, keywords, flags, options, ellipsis } = parseArgs(process.argv);
-console.log(command, '------', keywords, '------', flags, '------', options)
 
 // ------------------------------------------
 
