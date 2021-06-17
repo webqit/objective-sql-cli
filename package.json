@@ -21,6 +21,10 @@
   "bin": {
     "objsql": "./src/index.js"
   },
+  "scripts": {
+    "postversion": "npm publish",
+    "postpublish": "git push && git push --tags"
+  },
   "dependencies": {
     "@webqit/backpack": "0.0.3",
     "@webqit/util": "^0.7.0"
